@@ -1,40 +1,69 @@
+from random import choice
+
 class State:
 	def __init__(self):
-		self.prev_ = list()
-		self.next_ = dict()
+		self.prev_ = dict() # maps letter to all predecessors
+		self.next_ = dict() # maps letter to single successor
 		self.accept_ = False
-		self.name_ = None
+		self.ID_ = None
 		pass
+
+	def next(self, letter):
+		return self.next_.get(letter, None)
+
+	def prev(self, letter):
+		return self.prev_.get(letter, None)
+
+	def nextIs(self, letter, state):
+		self.next_[letter] = state
+
+		print "setting state", self.ID_, letter, state.ID_
+		if state.prev(letter) is None:
+			state.prev_[letter] = [self]
+		else:
+			state.prev_[letter].append(self)
 
 	def nextNew(self, letter):
 		if self.next_.get(letter, None) is None:
-			self.next_[letter] = State()
-			self.next_[letter].prev_.append(self)
+			self.nextIs(letter, State())
 		return self.next_[letter]
-
-	def next(self, a):
-		return self.next_.get(a, None)
 
 
 class Regex:
 	def __init__(self, str=None):
 		self.states_ = dict()
-		self.lastStateName_ = -1
+		self.lastStateID_ = -1
 		self.start_ = State()
 		self.stateIs(self.start_)
 		if str:
 			self.stringIs(str)
 
 	def stateIs(self, state):
-		self.lastStateName_ = self.lastStateName_ + 1
-		self.states_[self.lastStateName_] = state
-		state.name_ = self.lastStateName_
+		self.lastStateID_ = self.lastStateID_ + 1
+		self.states_[self.lastStateID_] = state
+		state.ID_ = self.lastStateID_
+
+	def stateDel(self, state):
+		assert state.ID_ != self.start_.ID_
+
+		# remove from next values
+		for k, s in state.next_.items():
+			s.prev_[k].remove(state)
+
+		# remove from prev values
+		for k, sSet in state.prev_.items():
+			for s in sSet:
+				if s.next_[k].ID_ == state.ID_:
+					del self.next_[k]
+
+		# remove from map
+		del self.states_[state.ID_]
 
 	def stringIs(self, str):
 		lastState = self.start_
 		for a in str:
 			lastState = lastState.nextNew(a)
-			if lastState.name_ is None:
+			if lastState.ID_ is None:
 				self.stateIs(lastState)
 		lastState.accept_ = True
 
@@ -45,21 +74,73 @@ class Regex:
 			str = str[1:]
 			if state is None:
 				return False
-
 		return state.accept_
 
-	#def mergeState(self):
+	def mergeStates(self, state1, state2):
+		# check for zero state here
+		if state1.ID_ == state2.ID_:
+			return
+		if state2.ID_ == self.start_.ID_:
+			temp = state1
+			state1 = state2
+			state2 = temp
+
+		# is it possble to reach a removed state here?
+		if self.states_.get(state1.ID_, None) == None or \
+			self.states_.get(state2.ID_, None) == None:
+			return
+
+		# add outgoing transitions (originally from state2) to state1
+		mergeList = list()
+		print "Adding outgoing transitions"
+		for k, s in state2.next_.items():
+			next = state1.next(k)
+			if next == None:
+				state1.nextIs(k, s)
+
+			# if state1 and state2 have conflicting transitions,
+			# merge those states
+			elif next != s:
+				mergeList.append((next, s))
+
+
+		# add incoming transitions (originally to state2) to state1
+		print "Adding incoming transitions"
+		for k, sSet in state2.prev_.items():
+			for s in sSet:
+				s.nextIs(k, state1)
+
+		# delete state2
+		self.stateDel(state2)
+
+		# merge remaining items
+		for a, b in mergeList:
+			self.mergeStates(a, b)
+
+	def mergeRandom(self):
+		stateList = self.states_.keys()[:]
+		ID1 = choice(stateList)
+		ID2 = choice(list(a for a in stateList if a != ID1))
+		
+		# self.mergeStates(self.states_[ID1], self.states[ID2])
+
+		print "\nmerging states 4 and 6"
+		self.mergeStates(self.states_[4], self.states_[6])
 
 	def display(self):
+		print "All states:", self.states_.keys()
 		for state in self.states_.values():
-			print state.name_, "accept:", state.accept_
-			for k, s in zip(state.next_.keys(), state.next_.values()):
-				print "  ", k, ":", s.name_
+			print state.ID_, "accept:", state.accept_
+			print "  reached from:", dict((k, list(s.ID_ for s in sSet))
+				for k, sSet in state.prev_.items())
+			if len(state.next_) > 0:
+				print "  leads to:", dict((k, s.ID_) for k, s in state.next_.items())
 
 
 if __name__ == '__main__':
-	re = Regex("test")
-	re.stringIs("tesh")
-	re.stringIs("allaroundtheworld")
+	re = Regex("testa")
+	re.stringIs("tesha")
+	
 	re.display()
-	print re.string("tehhh")
+	re.mergeRandom()
+	re.display()
