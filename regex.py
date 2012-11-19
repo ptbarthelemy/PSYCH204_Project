@@ -2,6 +2,8 @@ from random import choice
 import pydot
 from state import State
 
+# test for commit
+
 class Regex:
 	def __init__(self, str=None):
 		self.states_ = dict()
@@ -77,24 +79,24 @@ class Regex:
 			next = state1.next(k)
 			if next == None:
 				state1.nextIs(k, s)			
-			"""
-			If states to be merged share a transition key, then merge the 
-			endpoints of both transitions. For instance, if merging states 2
-			and 5 below, you should also merge states 3 and 6.
-			  A    B
-			1 -> 2 -> 3
-			  C    B
-			4 -> 5 -> 6 
-			"""
 			elif next != s:
 				"""
-				If the conflict is that state1 leads to state2, merge state1
-				with the state after state2. For instance, if trying to merge
-				states 2 and 3 from below, you should merge 2, 3, and 4.
-				   b    o    o    t
-				 1 -> 2 -> 3 -> 4 -> 5
+				If states to be merged share a transition key, then merge the 
+				endpoints of both transitions. For instance, if merging states 2
+				and 5 below, you should also merge states 3 and 6.
+				  A    B
+				1 -> 2 -> 3
+				  C    B
+				4 -> 5 -> 6 
 				"""
 				if next == state2:
+					"""
+					If, in addition, state1 leads to state2, merge state1
+					with the state after state2. For instance, if trying to merge
+					states 2 and 3 from below, you should merge 2, 3, *and* 4.
+					   b    o    o    t
+					 1 -> 2 -> 3 -> 4 -> 5
+					"""
 					mergeList.append((state1, s))
 				else:
 					mergeList.append((next, s))
@@ -136,16 +138,15 @@ class Regex:
 
 		return copy
 
-	def mergeRandom(self):
+	def merge(self, ID1=None, ID2=None):
 		# return if only one state remains
 		if len(self.states_) == 1:
 			return
-		ID1 = choice(self.states_.keys())
-		ID2 = choice(list(a for a in self.states_.keys() if a != ID1))
-		# print "Merging states", ID1, "and", ID2
-		# self.mergeStates(self.states_[ID1], self.states_[ID2])
-
-		self.mergeStates(self.states_[8], self.states_[9])
+		if ID1 is None or ID2 is None:
+			ID1 = choice(self.states_.keys())
+			ID2 = choice(list(a for a in self.states_.keys() if a != ID1))
+		print "Merging states", ID1, "and", ID2
+		self.mergeStates(self.states_[ID1], self.states_[ID2])
 
 	def printText(self):
 		print "All states:", self.states_.keys()
@@ -188,12 +189,15 @@ class Regex:
 		graph.write_png(filename)
 
 if __name__ == '__main__':
-	re = Regex("testa")
-	re.stringIs("tesha")
-	re.stringIs("bootcamp")
+	re = Regex("aba")
+	re.stringIs("abba")
+	re.printGraph("output/before.png")
+	re.merge(2, 4)
+	re.printGraph("output/after.png")
 
-	re.printGraph("before.png")	
-	re.mergeRandom()
-	re2 = re.copyRegex()
-	re2.printGraph("after.png")
+	# re.printGraph("output/merge0.png")	
+	# for i in range(len(re.states_)):
+	# 	re.mergeRandom()
+	# 	re.printGraph("output/merge%d.png"%(1 + i))
+
 
