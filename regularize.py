@@ -1,4 +1,5 @@
 from random import choice
+import pydot
 
 class State:
 	def __init__(self):
@@ -17,7 +18,6 @@ class State:
 	def nextIs(self, letter, state):
 		self.next_[letter] = state
 
-		print "setting state", self.ID_, letter, state.ID_
 		if state.prev(letter) is None:
 			state.prev_[letter] = [self]
 		else:
@@ -92,23 +92,23 @@ class Regex:
 
 		# add outgoing transitions (originally from state2) to state1
 		mergeList = list()
-		print "Adding outgoing transitions"
 		for k, s in state2.next_.items():
 			next = state1.next(k)
 			if next == None:
 				state1.nextIs(k, s)
-
 			# if state1 and state2 have conflicting transitions,
 			# merge those states
 			elif next != s:
 				mergeList.append((next, s))
 
-
 		# add incoming transitions (originally to state2) to state1
-		print "Adding incoming transitions"
 		for k, sSet in state2.prev_.items():
 			for s in sSet:
 				s.nextIs(k, state1)
+
+		# make accept state if either state is accept
+		if state2.accept_:
+			state1.accept_ = True
 
 		# delete state2
 		self.stateDel(state2)
@@ -122,25 +122,61 @@ class Regex:
 		ID1 = choice(stateList)
 		ID2 = choice(list(a for a in stateList if a != ID1))
 		
-		# self.mergeStates(self.states_[ID1], self.states[ID2])
+		print "Merging states", ID1, "and", ID2
 
-		print "\nmerging states 4 and 6"
-		self.mergeStates(self.states_[4], self.states_[6])
+		self.mergeStates(self.states_[ID1], self.states_[ID2])
 
-	def display(self):
-		print "All states:", self.states_.keys()
-		for state in self.states_.values():
-			print state.ID_, "accept:", state.accept_
-			print "  reached from:", dict((k, list(s.ID_ for s in sSet))
-				for k, sSet in state.prev_.items())
-			if len(state.next_) > 0:
-				print "  leads to:", dict((k, s.ID_) for k, s in state.next_.items())
+		# print "\nmerging states 4 and 6"
+		# self.mergeStates(self.states_[4], self.states_[6])
 
+	# def display(self):
+	# 	print "All states:", self.states_.keys()
+	# 	for state in self.states_.values():
+	# 		print state.ID_, "accept:", state.accept_
+	# 		print "  reached from:", dict((k, list(s.ID_ for s in sSet))
+	# 			for k, sSet in state.prev_.items())
+	# 		if len(state.next_) > 0:
+	# 			print "  leads to:", dict((k, s.ID_) for k, s in state.next_.items())
+
+	def printGraph(self, filename):
+		graph = pydot.Dot(graph_type='digraph')
+
+		# identify nodes and add to graph
+		nodes = dict()
+		for ID in self.states_.keys():
+			if self.states_[ID].accept_:
+				nodes[ID] = pydot.Node("%d"%ID, style="filled", fillcolor="grey")
+			else:
+				nodes[ID] = pydot.Node("%d"%ID)
+			graph.add_node(nodes[ID])
+
+		# identify edges
+		edges = dict()
+		for s1ID, s1 in self.states_.items():
+			edges[s1ID] = dict()
+			for k, s2 in s1.next_.items():
+				if edges[s1ID].get(s2.ID_, None) == None:
+					edges[s1ID][s2.ID_] = k
+				else:
+					edges[s1ID][s2.ID_] += k
+
+		# add edges to graph
+		for s1ID in edges.keys():
+			for s2ID in edges[s1ID].keys():
+				edge = pydot.Edge("%d"% s1ID, "%d"% s2ID, label=edges[s1ID][s2ID])
+				graph.add_edge(edge)
+
+		# display graph
+		graph.write_png(filename)
 
 if __name__ == '__main__':
 	re = Regex("testa")
 	re.stringIs("tesha")
-	
-	re.display()
+	re.stringIs("bootcamp")
+
+	re.printGraph("before.png")	
 	re.mergeRandom()
-	re.display()
+	re.mergeRandom()
+	re.mergeRandom()
+	re.mergeRandom()
+	re.printGraph("after.png")
