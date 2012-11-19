@@ -1,33 +1,6 @@
 from random import choice
 import pydot
-
-class State:
-	def __init__(self):
-		self.prev_ = dict() # maps letter to all predecessors
-		self.next_ = dict() # maps letter to single successor
-		self.accept_ = False
-		self.ID_ = None
-		pass
-
-	def next(self, letter):
-		return self.next_.get(letter, None)
-
-	def prev(self, letter):
-		return self.prev_.get(letter, None)
-
-	def nextIs(self, letter, state):
-		self.next_[letter] = state
-
-		if state.prev(letter) is None:
-			state.prev_[letter] = [self]
-		else:
-			state.prev_[letter].append(self)
-
-	def nextNew(self, letter):
-		if self.next_.get(letter, None) is None:
-			self.nextIs(letter, State())
-		return self.next_[letter]
-
+from state import State
 
 class Regex:
 	def __init__(self, str=None):
@@ -89,6 +62,7 @@ class Regex:
 		# return if state no longer exists
 		if self.state(state1.ID_) == None or \
 			self.state(state2.ID_) == None:
+			print "State no longer exists"
 			return
 
 		# if one of the states is the start state, make it start1
@@ -102,11 +76,28 @@ class Regex:
 		for k, s in state2.next_.items():
 			next = state1.next(k)
 			if next == None:
-				state1.nextIs(k, s)
-			# if state1 and state2 have conflicting transitions,
-			# merge those states
+				state1.nextIs(k, s)			
+			"""
+			If states to be merged share a transition key, then merge the 
+			endpoints of both transitions. For instance, if merging states 2
+			and 5 below, you should also merge states 3 and 6.
+			  A    B
+			1 -> 2 -> 3
+			  C    B
+			4 -> 5 -> 6 
+			"""
 			elif next != s:
-				mergeList.append((next, s))
+				"""
+				If the conflict is that state1 leads to state2, merge state1
+				with the state after state2. For instance, if trying to merge
+				states 2 and 3 from below, you should merge 2, 3, and 4.
+				   b    o    o    t
+				 1 -> 2 -> 3 -> 4 -> 5
+				"""
+				if next == state2:
+					mergeList.append((state1, s))
+				else:
+					mergeList.append((next, s))
 
 		# add incoming transitions (originally to state2) to state1
 		for k, sSet in state2.prev_.items():
@@ -149,12 +140,12 @@ class Regex:
 		# return if only one state remains
 		if len(self.states_) == 1:
 			return
-		stateList = self.states_.keys()[:]
-		ID1 = choice(stateList)
-		ID2 = choice(list(a for a in stateList if a != ID1))
-		
-		print "Merging states", ID1, "and", ID2
-		self.mergeStates(self.states_[ID1], self.states_[ID2])
+		ID1 = choice(self.states_.keys())
+		ID2 = choice(list(a for a in self.states_.keys() if a != ID1))
+		# print "Merging states", ID1, "and", ID2
+		# self.mergeStates(self.states_[ID1], self.states_[ID2])
+
+		self.mergeStates(self.states_[8], self.states_[9])
 
 	def printText(self):
 		print "All states:", self.states_.keys()
@@ -203,7 +194,6 @@ if __name__ == '__main__':
 
 	re.printGraph("before.png")	
 	re.mergeRandom()
-	re.printGraph("before.png")	
-	# re.printGraph("after.png")
 	re2 = re.copyRegex()
 	re2.printGraph("after.png")
+
