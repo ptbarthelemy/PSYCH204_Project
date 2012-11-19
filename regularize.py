@@ -33,8 +33,7 @@ class Regex:
 	def __init__(self, str=None):
 		self.states_ = dict()
 		self.lastStateID_ = -1
-		self.start_ = State()
-		self.stateIs(self.start_)
+		self.start_ = None
 		if str:
 			self.stringIs(str)
 
@@ -59,7 +58,13 @@ class Regex:
 		# remove from map
 		del self.states_[state.ID_]
 
+	def state(self, ID):
+		return self.states_.get(ID, None)
+
 	def stringIs(self, str):
+		if self.start_ == None:		
+			self.start_ = State()
+			self.stateIs(self.start_)
 		lastState = self.start_
 		for a in str:
 			lastState = lastState.nextNew(a)
@@ -77,18 +82,20 @@ class Regex:
 		return state.accept_
 
 	def mergeStates(self, state1, state2):
-		# check for zero state here
+		# return if merging the same state
 		if state1.ID_ == state2.ID_:
 			return
+
+		# return if state no longer exists
+		if self.state(state1.ID_) == None or \
+			self.state(state2.ID_) == None:
+			return
+
+		# if one of the states is the start state, make it start1
 		if state2.ID_ == self.start_.ID_:
 			temp = state1
 			state1 = state2
 			state2 = temp
-
-		# is it possble to reach a removed state here?
-		if self.states_.get(state1.ID_, None) == None or \
-			self.states_.get(state2.ID_, None) == None:
-			return
 
 		# add outgoing transitions (originally from state2) to state1
 		mergeList = list()
@@ -117,26 +124,46 @@ class Regex:
 		for a, b in mergeList:
 			self.mergeStates(a, b)
 
+	def copyRegex(self):
+		copy = Regex(None)
+
+		# add all of the nodes
+		for ID, s in self.states_.items():
+			newState = State()
+			newState.accept_ = s.accept_
+			newState.ID_ = ID
+			copy.states_[ID] = newState
+
+		# add all of the edges
+		for ID, s1 in self.states_.items():
+			for k, s2 in s1.next_.items():
+				copy.states_[ID].nextIs(k, copy.states_[s2.ID_])
+
+		# set the start node
+		copy.lastStateID_ = self.lastStateID_
+		copy.start = copy.states_[self.start_.ID_]
+
+		return copy
+
 	def mergeRandom(self):
+		# return if only one state remains
+		if len(self.states_) == 1:
+			return
 		stateList = self.states_.keys()[:]
 		ID1 = choice(stateList)
 		ID2 = choice(list(a for a in stateList if a != ID1))
 		
 		print "Merging states", ID1, "and", ID2
-
 		self.mergeStates(self.states_[ID1], self.states_[ID2])
 
-		# print "\nmerging states 4 and 6"
-		# self.mergeStates(self.states_[4], self.states_[6])
-
-	# def display(self):
-	# 	print "All states:", self.states_.keys()
-	# 	for state in self.states_.values():
-	# 		print state.ID_, "accept:", state.accept_
-	# 		print "  reached from:", dict((k, list(s.ID_ for s in sSet))
-	# 			for k, sSet in state.prev_.items())
-	# 		if len(state.next_) > 0:
-	# 			print "  leads to:", dict((k, s.ID_) for k, s in state.next_.items())
+	def printText(self):
+		print "All states:", self.states_.keys()
+		for state in self.states_.values():
+			print state.ID_, "accept:", state.accept_
+			print "  reached from:", dict((k, list(s.ID_ for s in sSet))
+				for k, sSet in state.prev_.items())
+			if len(state.next_) > 0:
+				print "  leads to:", dict((k, s.ID_) for k, s in state.next_.items())
 
 	def printGraph(self, filename):
 		graph = pydot.Dot(graph_type='digraph')
@@ -176,7 +203,7 @@ if __name__ == '__main__':
 
 	re.printGraph("before.png")	
 	re.mergeRandom()
-	re.mergeRandom()
-	re.mergeRandom()
-	re.mergeRandom()
-	re.printGraph("after.png")
+	re.printGraph("before.png")	
+	# re.printGraph("after.png")
+	re2 = re.copyRegex()
+	re2.printGraph("after.png")
