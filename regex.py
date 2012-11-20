@@ -1,8 +1,7 @@
-from random import choice
+from random import choice, seed
 import pydot
 from state import State
 
-# test for commit
 
 class Regex:
 	def __init__(self, str=None):
@@ -148,6 +147,10 @@ class Regex:
 		print "Merging states", ID1, "and", ID2
 		self.mergeStates(self.states_[ID1], self.states_[ID2])
 
+	def wildcardize(self):
+		for s1 in self.states_.values():
+			s1.wildcardize()
+
 	def printText(self):
 		print "All states:", self.states_.keys()
 		for state in self.states_.values():
@@ -189,10 +192,11 @@ class Regex:
 		graph.write_png(filename)
 
 if __name__ == '__main__':
+	seed()
 	re = Regex("aba")
 	re.stringIs("abba")
 	re.printGraph("output/before.png")
-	re.merge(2, 4)
+	re.wildcardize()
 	re.printGraph("output/after.png")
 
 	# re.printGraph("output/merge0.png")	
