@@ -5,6 +5,7 @@ from state import State
 
 class Regex:
 	def __init__(self, str=None):
+		self.mergeQueue_ = list()
 		self.states_ = dict()
 		self.lastStateID_ = -1
 		self.start_ = None
@@ -20,14 +21,12 @@ class Regex:
 		assert state.ID_ != self.start_.ID_
 
 		# remove from next values
-		for k, s in state.next_.items():
-			# print "Removing", state.ID_, "from", list(s.ID_ for s in s.prev_[k]), "with key", k
-			state.nextRemove(k)
+		for k, s in state.next_:
+			state.nextRemove(k, s)
 
 		# remove from prev values
-		for k, sSet in state.prev_.items():
-			for s in sSet:
-				s.nextRemove(k)
+		for k, s in state.prev_:
+			s.nextRemove(k, state)
 
 		# remove from map
 		if self.states_.get(state.ID_, None) is not None:
@@ -39,13 +38,19 @@ class Regex:
 	def stringIs(self, str):
 		if self.start_ == None:		
 			self.start_ = State(self, True)
-			# self.stateIs(self.start_)
 		lastState = self.start_
 		for a in str:
 			nextState = State(self)
-			lastState.nextIs(a, nextState)
-			lastState = nextState
+			lastState = lastState.nextIs(a, nextState)
+			# nextState = State(self)
+			# lastState.nextIs(a, nextState)
+			# lastState = nextState
 		lastState.accept_ = True
+
+		print "need to merge", list((s1.ID_, s2.ID_) for s1, s2 in self.mergeQueue_)
+		while len(self.mergeQueue_) > 0:
+			s1, s2 = self.mergeQueue_.pop(0)
+			s1.merge(s2)
 
 	def string(self, str):
 		state = self.start_
@@ -54,6 +59,7 @@ class Regex:
 			str = str[1:]
 			if state is None:
 				return False
+
 		return state.accept_
 
 	def copyRegex(self):
@@ -86,6 +92,10 @@ class Regex:
 			ID2 = choice(list(a for a in self.states_.keys() if a != ID1))
 		print "Merging states", ID1, "and", ID2
 		self.states_[ID1].merge(self.states_[ID2])
+		
+		while len(self.mergeQueue_) > 0:
+			s1, s2 = self.mergeQueue_.pop(0)
+			s1.merge(s2)
 
 	def wildcardize(self):
 		for s1 in self.states_.values():
@@ -95,10 +105,11 @@ class Regex:
 		print "All states:", self.states_.keys()
 		for state in self.states_.values():
 			print state.ID_, "accept:", state.accept_
-			print "  reached from:", dict((k, list(s.ID_ for s in sSet))
-				for k, sSet in state.prev_.items())
+			print "  reached from:", list((k, s.ID_)
+				for k, s in state.prev_)
 			if len(state.next_) > 0:
-				print "  leads to:", dict((k, s.ID_) for k, s in state.next_.items())
+				print "  leads to:", list((k, s.ID_)
+					for k, s in state.next_)
 
 	def printGraph(self, filename):
 		graph = pydot.Dot(graph_type='digraph')
@@ -116,7 +127,7 @@ class Regex:
 		edges = dict()
 		for s1ID, s1 in self.states_.items():
 			edges[s1ID] = dict()
-			for k, s2 in s1.next_.items():
+			for k, s2 in s1.next_:
 				if edges[s1ID].get(s2.ID_, None) == None:
 					edges[s1ID][s2.ID_] = k
 				else:
@@ -132,23 +143,53 @@ class Regex:
 		graph.write_png(filename)
 
 if __name__ == '__main__':
-	seed(7)
-	re = Regex("testa")
-	re.stringIs("bSsa")
+	# # test 1: should end in the Kleene star
+	# re = Regex("abc")
+	# re.stringIs("sS")
+	# re.printGraph("output/test1-1.png")
+	# print "\n***about to add S"
+	# re.stringIs("S")
+	# re.printGraph("output/test1-2.png")	
+	# re.merge(0, 3)
+	# re.printGraph("output/test1-3.png")	
+	# re.merge(0, 5)
+	# re.printGraph("output/test1-4.png")	
+
+	# # test 2: should create the following cleanly (without orphans)
+	# seed(7)
+	# re = Regex("testa")
+	# re.stringIs("tesSa")
 	# re.stringIs("bootcamp")
+	# re.printGraph("output/merge0.png")	
+	# for i in range(len(re.states_)):
+	# 	re.merge()
+	# 	print "*** Loop stage", (1 + i)
+	# 	re.printText()
+	# 	re.printGraph("output/merge%d.png"%(1 + i))
 
-	re.printGraph("output/merge0.png")	
-	for i in range(len(re.states_)):
-		re.merge()
-		print "*** Loop stage", (1 + i)
-		re.printText()
-		re.printGraph("output/merge%d.png"%(1 + i))
+	# # test 3: should be Kleene star by merge9
+	# seed(5)
+	# re = Regex("testa")
+	# re.stringIs("tesSa")
+	# re.stringIs("bootcamp")
+	# re.printGraph("output/merge0.png")	
+	# for i in range(len(re.states_)):
+	# 	re.merge()
+	# 	print "\n*** Loop stage", (1 + i)
+	# 	re.printText()
+	# 	re.printGraph("output/merge%d.png"%(1 + i))
 
-	# re = Regex("aba")
-	# re.printGraph("output/before.png")
-	# re.stringIs("abba")
-	# re.printGraph("output/before.png")
-	# # re.merge(1,3)
-	# #re.wildcardize()
-	# re.printGraph("output/after.png")
+	# test 4: should be Kleene star by merge9
+
+	# test 5: try out wildcards
+	# seed()
+	# re = Regex("testa")
+	# re.stringIs("tesSa")
+	# re.stringIs("bootcamp")
+	# re.printGraph("output/merge0.png")	
+	# for i in range(len(re.states_)):
+	# 	re.wildcardize()
+	# 	print "\n*** Loop stage", (1 + i)
+	# 	re.printText()
+	# 	re.printGraph("output/merge%d.png"%(1 + i))
 

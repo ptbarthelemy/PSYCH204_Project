@@ -7,36 +7,28 @@ SET_ALPHA = "abcdefghijklmnopqrstuvwxyz"
 WILDCARD_ALL = "S"
 SET_ALL = "0123456789abcdefghijklmnopqrstuvwxyz -"
 
-def getFromLetterDict(letterDict, letter):
-	result = None
-	if letter in SET_NUM:
-		result = letterDict.get(WILDCARD_NUM, None)
-	if result is None and letter in SET_ALPHA:
-		result = letterDict.get(WILDCARD_ALPHA, None)
-	if result is None:
-		result = letterDict.get(WILDCARD_ALL, None)
-	if result is None:
-		result = letterDict.get(letter, None)
-	return result	
 
-def overlap(letter1, letter2):
-	if letter1 == letter2:
-		return letter1
-	if WILDCARD_ALL in (letter1, letter2):
+def keyUnion(key1, key2):
+	# return a wildcard if applicable
+	if WILDCARD_ALL in key1+key2:
 		return WILDCARD_ALL
-	if WILDCARD_ALPHA == letter1 and letter2 in SET_ALPHA or\
-		WILDCARD_ALPHA == letter2 and letter1 in SET_ALPHA:
+	if WILDCARD_ALPHA in key1 and sum(1 for a in key2 if a in SET_ALPHA) == len(key2) or\
+		WILDCARD_ALPHA in key2 and sum(1 for a in key1 if a in SET_ALPHA) == len(key1):
 		return WILDCARD_ALPHA
-	if WILDCARD_NUM == letter1 and letter2 in SET_NUM or\
-		WILDCARD_NUM == letter2 and letter1 in SET_NUM:
+	if WILDCARD_NUM == key1 and (1 for a in key2 if a in SET_NUM) == len(key2) or\
+		WILDCARD_NUM == key2 and sum(1 for a in key1 if a in SET_NUM) == len(key1):
 		return WILDCARD_NUM
-	return None
 
+	# otherwise take the union
+	return ''.join(set(key1 + key2))
+
+def keysOverlap(key1, key2):
+	return len(keyUnion(key1, key2)) < len(key1 + key2)
 
 class State:
 	def __init__(self, regex, start=False):
-		self.prev_ = dict() # maps letter to all predecessors
-		self.next_ = dict() # maps letter to single successor
+		self.prev_ = list() # maps key to all predecessors
+		self.next_ = list() # maps key to single successor
 		self.accept_ = False
 		self.ID_ = None
 		self.start_ = start
@@ -45,44 +37,64 @@ class State:
 		pass
 
 	def next(self, letter):
-		return getFromLetterDict(self.next_, letter)
+		for k, s in self.next_:
+			if keysOverlap(k, letter):
+				return s
+		return None
 
-	def prev(self, letter):
-		return getFromLetterDict(self.prev_, letter)
+	# def prev(self, letter):
+	# 	return getFromLetterDict(self.prev_, letter)
 
-	def nextRemove(self, letter):
-		print "Removing transition", self.ID_, ":",letter,":", self.next_[letter].ID_
-		nextState = self.next_[letter]
-		del self.next_[letter]
-		nextState.prev_[letter].remove(self)
-		if len(nextState.prev_[letter]) == 0:
-			del nextState.prev_[letter]
+	def nextRemove(self, key, state=None):
+		print "Removing transitions for", self.ID_, ":",key, ":"
+		# remove forward pointer
+		index = 0
+		nextStates = list()
+		indices = list()
+		for k, s in self.next_:
+			if keysOverlap(k, key):
+				remove = False
+				if state is None:
+					remove = True
+				elif s.ID_ == state.ID_:
+					remove = True
+				if remove:
+					print " ...", s.ID_
+					nextStates.append(s)
+					indices.append(index)
+			index += 1
+		for i in reversed(indices):
+			del self.next_[i]
 
-	def nextIs(self, letter, state):
-		print "Transition", self.ID_, ":", letter, ":", state.ID_
+		# remove backward pointer
+		for nextState in nextStates:
+			index = 0
+			indices = list()
+			for k, s in nextState.prev_:
+				if keysOverlap(k, key) and s.ID_ == self.ID_:
+					indices.append(index)
+				index += 1
 
-		# merge items as necessary
-		mergeList = list()
-		for k, s in self.next_.items():
-			newLetter = overlap(k, letter)
-			if newLetter is not None:
-				print "  >Transition", self.ID_, ":", k, ":", s.ID_, "requires merging"
-				letter = newLetter
-				mergeList.append(s)
+			for i in reversed(indices):
+				del nextState.prev_[i]
+
+	def nextIs(self, key, state):
+		print "Transition", self.ID_, ":", key, ":", state.ID_
+
+		# insert state, merge with existing transition to same state (if exists)
+		for k, s in self.next_:
+			if s.ID_ == state.ID_:
 				self.nextRemove(k)
+				key = keyUnion(key, k)
+		self.next_.append((key, state))
+		state.prev_.append((key, self))
 
-		# insert state
-		self.regex_.printText()
-		self.next_[letter] = state
-		if state.prev_.get(letter, None) is None:
-			state.prev_[letter] = [self]
-		else:
-			state.prev_[letter].append(self)
+		# merge if there are any conflicts
+		for k1, s1, k2, s2 in ((k1, s1, k2, s2) for k1, s1 in self.next_ for k2, s2 in self.next_):
+			if keysOverlap(k1, k2) and s1.ID_ is not s2.ID_:
+				self.regex_.mergeQueue_.append((s1, s2))
 
-		# merge remaining states
-		for s in mergeList:
-			print "Merging", s.ID_
-			state.merge(s)
+		return self.next(key)
 
 	def merge(self, state):
 		print "Merging", self.ID_, "with", state.ID_
@@ -99,16 +111,17 @@ class State:
 			return
 
 		# add incoming transitions (originally to state) to self
-		print "Changing incoming transitions"
-		for k, sSet in state.prev_.items():
-			for s in sSet[:]: # set is not constant--need copy
-				s.nextRemove(k)
-				s.nextIs(k, self)
+		print "Changing incoming transitions", list((k, s.ID_)
+				for k, s in state.prev_)
+		for k, s in state.prev_[:]:
+			s.nextRemove(k, state)
+			s.nextIs(k, self)
 
 		# add outgoing transitions (originally from state) to state1
-		# mergeList = list()
-		print "Changing outgoing transitions"
-		for k, s in state.next_.items():
+		print "Changing outgoing transitions", list((k, s.ID_)
+					for k, s in state.next_)
+		for k, s in state.next_[:]:
+			state.nextRemove(k, s)
 			self.nextIs(k, s)
 
 		# make accept state if either state is accept
@@ -146,7 +159,7 @@ class State:
 		return True
 
 	def wildcardize(self):
-		for k, s2 in self.next_.items():
+		for k, s2 in self.next_:
 			for wildcard in [WILDCARD_NUM, WILDCARD_ALPHA, WILDCARD_ALL]:
 				if self.wildcardizeTransition(k, wildcard):
 					break
