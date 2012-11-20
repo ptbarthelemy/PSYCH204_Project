@@ -16,34 +16,35 @@ class Regex:
 		self.states_[self.lastStateID_] = state
 		state.ID_ = self.lastStateID_
 
-	def stateDel(self, state):
+	def stateRemove(self, state):
 		assert state.ID_ != self.start_.ID_
 
 		# remove from next values
 		for k, s in state.next_.items():
-			s.prev_[k].remove(state)
+			# print "Removing", state.ID_, "from", list(s.ID_ for s in s.prev_[k]), "with key", k
+			state.nextRemove(k)
 
 		# remove from prev values
 		for k, sSet in state.prev_.items():
 			for s in sSet:
-				if s.next_[k].ID_ == state.ID_:
-					del self.next_[k]
+				s.nextRemove(k)
 
 		# remove from map
-		del self.states_[state.ID_]
+		if self.states_.get(state.ID_, None) is not None:
+			del self.states_[state.ID_]
 
 	def state(self, ID):
 		return self.states_.get(ID, None)
 
 	def stringIs(self, str):
 		if self.start_ == None:		
-			self.start_ = State()
-			self.stateIs(self.start_)
+			self.start_ = State(self, True)
+			# self.stateIs(self.start_)
 		lastState = self.start_
 		for a in str:
-			lastState = lastState.nextNew(a)
-			if lastState.ID_ is None:
-				self.stateIs(lastState)
+			nextState = State(self)
+			lastState.nextIs(a, nextState)
+			lastState = nextState
 		lastState.accept_ = True
 
 	def string(self, str):
@@ -55,73 +56,12 @@ class Regex:
 				return False
 		return state.accept_
 
-	def mergeStates(self, state1, state2):
-		# return if merging the same state
-		if state1.ID_ == state2.ID_:
-			return
-
-		# return if state no longer exists
-		if self.state(state1.ID_) == None or \
-			self.state(state2.ID_) == None:
-			print "State no longer exists"
-			return
-
-		# if one of the states is the start state, make it start1
-		if state2.ID_ == self.start_.ID_:
-			temp = state1
-			state1 = state2
-			state2 = temp
-
-		# add outgoing transitions (originally from state2) to state1
-		mergeList = list()
-		for k, s in state2.next_.items():
-			next = state1.next(k)
-			if next == None:
-				state1.nextIs(k, s)			
-			elif next != s:
-				"""
-				If states to be merged share a transition key, then merge the 
-				endpoints of both transitions. For instance, if merging states 2
-				and 5 below, you should also merge states 3 and 6.
-				  A    B
-				1 -> 2 -> 3
-				  C    B
-				4 -> 5 -> 6 
-				"""
-				if next == state2:
-					"""
-					If, in addition, state1 leads to state2, merge state1
-					with the state after state2. For instance, if trying to merge
-					states 2 and 3 from below, you should merge 2, 3, *and* 4.
-					   b    o    o    t
-					 1 -> 2 -> 3 -> 4 -> 5
-					"""
-					mergeList.append((state1, s))
-				else:
-					mergeList.append((next, s))
-
-		# add incoming transitions (originally to state2) to state1
-		for k, sSet in state2.prev_.items():
-			for s in sSet:
-				s.nextIs(k, state1)
-
-		# make accept state if either state is accept
-		if state2.accept_:
-			state1.accept_ = True
-
-		# delete state2
-		self.stateDel(state2)
-
-		# merge remaining items
-		for a, b in mergeList:
-			self.mergeStates(a, b)
-
 	def copyRegex(self):
 		copy = Regex(None)
 
 		# add all of the nodes
 		for ID, s in self.states_.items():
-			newState = State()
+			newState = State(self)
 			newState.accept_ = s.accept_
 			newState.ID_ = ID
 			copy.states_[ID] = newState
@@ -145,7 +85,7 @@ class Regex:
 			ID1 = choice(self.states_.keys())
 			ID2 = choice(list(a for a in self.states_.keys() if a != ID1))
 		print "Merging states", ID1, "and", ID2
-		self.mergeStates(self.states_[ID1], self.states_[ID2])
+		self.states_[ID1].merge(self.states_[ID2])
 
 	def wildcardize(self):
 		for s1 in self.states_.values():
@@ -192,16 +132,23 @@ class Regex:
 		graph.write_png(filename)
 
 if __name__ == '__main__':
-	seed()
-	re = Regex("aba")
-	re.stringIs("abba")
-	re.printGraph("output/before.png")
-	re.wildcardize()
-	re.printGraph("output/after.png")
+	seed(7)
+	re = Regex("testa")
+	re.stringIs("bSsa")
+	# re.stringIs("bootcamp")
 
-	# re.printGraph("output/merge0.png")	
-	# for i in range(len(re.states_)):
-	# 	re.mergeRandom()
-	# 	re.printGraph("output/merge%d.png"%(1 + i))
+	re.printGraph("output/merge0.png")	
+	for i in range(len(re.states_)):
+		re.merge()
+		print "*** Loop stage", (1 + i)
+		re.printText()
+		re.printGraph("output/merge%d.png"%(1 + i))
 
+	# re = Regex("aba")
+	# re.printGraph("output/before.png")
+	# re.stringIs("abba")
+	# re.printGraph("output/before.png")
+	# # re.merge(1,3)
+	# #re.wildcardize()
+	# re.printGraph("output/after.png")
 
