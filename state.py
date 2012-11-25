@@ -7,20 +7,28 @@ SET_ALPHA = "abcdefghijklmnopqrstuvwxyz"
 WILDCARD_ALL = "S"
 SET_ALL = "0123456789abcdefghijklmnopqrstuvwxyz -"
 
+DEBUG = False
 
 def keyUnion(key1, key2):
 	# return a wildcard if applicable
 	if WILDCARD_ALL in key1+key2:
 		return WILDCARD_ALL
-	if WILDCARD_ALPHA in key1 and sum(1 for a in key2 if a in SET_ALPHA) == len(key2) or\
-		WILDCARD_ALPHA in key2 and sum(1 for a in key1 if a in SET_ALPHA) == len(key1):
-		return WILDCARD_ALPHA
-	if WILDCARD_NUM == key1 and (1 for a in key2 if a in SET_NUM) == len(key2) or\
-		WILDCARD_NUM == key2 and sum(1 for a in key1 if a in SET_NUM) == len(key1):
-		return WILDCARD_NUM
+
+	result = set(key1 + key2)
+
+	if WILDCARD_ALPHA in result:
+		for a in result.copy():
+			if a in SET_ALPHA:
+				result.remove(a)
+	if WILDCARD_NUM in result:
+		for a in result.copy():
+			if a in SET_NUM:
+				result.remove(a)
 
 	# otherwise take the union
-	return ''.join(set(key1 + key2))
+	result = list(result)
+	result.sort()
+	return ''.join(result)
 
 def keysOverlap(key1, key2):
 	return len(keyUnion(key1, key2)) < len(key1 + key2)
@@ -46,7 +54,7 @@ class State:
 	# 	return getFromLetterDict(self.prev_, letter)
 
 	def nextRemove(self, key, state=None):
-		print "Removing transitions for", self.ID_, ":",key, ":"
+		if DEBUG: print "Removing transitions for", self.ID_, ":",key, ":"
 		# remove forward pointer
 		index = 0
 		nextStates = list()
@@ -59,7 +67,7 @@ class State:
 				elif s.ID_ == state.ID_:
 					remove = True
 				if remove:
-					print " ...", s.ID_
+					if DEBUG: print " ...", s.ID_
 					nextStates.append(s)
 					indices.append(index)
 			index += 1
@@ -79,7 +87,7 @@ class State:
 				del nextState.prev_[i]
 
 	def nextIs(self, key, state):
-		print "Transition", self.ID_, ":", key, ":", state.ID_
+		if DEBUG: print "Transition", self.ID_, ":", key, ":", state.ID_
 
 		# insert state, merge with existing transition to same state (if exists)
 		for k, s in self.next_:
@@ -90,35 +98,36 @@ class State:
 		state.prev_.append((key, self))
 
 		# merge if there are any conflicts
-		for k1, s1, k2, s2 in ((k1, s1, k2, s2) for k1, s1 in self.next_ for k2, s2 in self.next_):
-			if keysOverlap(k1, k2) and s1.ID_ is not s2.ID_:
+		for k1, s1, k2, s2 in ((k1, s1, k2, s2) for k1, s1 in self.next_
+			for k2, s2 in self.next_ if s1.ID_ < s2.ID_):
+			if keysOverlap(k1, k2):
 				self.regex_.mergeQueue_.append((s1, s2))
 
 		return self.next(key)
 
 	def merge(self, state):
-		print "Merging", self.ID_, "with", state.ID_
+		if DEBUG: print "Merging", self.ID_, "with", state.ID_
 		if self.ID_ == state.ID_:
-			print "States are the same."
+			if DEBUG: print "States are the same."
 			return
 		if state.ID_ not in self.regex_.states_.keys() \
 			or self.ID_ not in self.regex_.states_.keys() :
-			print "State no longer exists."
+			if DEBUG: print "State no longer exists."
 			return			
 		if state.start_:
-			print "Reordering so start state is first."
+			if DEBUG: print "Reordering so start state is first."
 			state.merge(self)
 			return
 
 		# add incoming transitions (originally to state) to self
-		print "Changing incoming transitions", list((k, s.ID_)
+		if DEBUG: print "Changing incoming transitions", list((k, s.ID_)
 				for k, s in state.prev_)
 		for k, s in state.prev_[:]:
 			s.nextRemove(k, state)
 			s.nextIs(k, self)
 
 		# add outgoing transitions (originally from state) to state1
-		print "Changing outgoing transitions", list((k, s.ID_)
+		if DEBUG: print "Changing outgoing transitions", list((k, s.ID_)
 					for k, s in state.next_)
 		for k, s in state.next_[:]:
 			state.nextRemove(k, s)
@@ -149,7 +158,7 @@ class State:
 			if k not in charSet:
 				return False
 		else:
-			print "Wildcard not recognized"
+			if DEBUG: print "Wildcard not recognized"
 
 		# do so probabilisitcally
 		if (random()) > count / len(charSet):
@@ -161,6 +170,18 @@ class State:
 	def wildcardize(self):
 		for k, s2 in self.next_:
 			for wildcard in [WILDCARD_NUM, WILDCARD_ALPHA, WILDCARD_ALL]:
-				if self.wildcardizeTransition(k, wildcard):
-					break
+				self.wildcardizeTransition(k, wildcard)
+
+
+if __name__ == '__main__':
+	# test keyunion
+	assert keyUnion("abcd", "abc") == "abcd", keyUnion("abcd", "abc")
+	assert keyUnion("abc", "abcd") == "abcd", keyUnion("abc", "abcd")
+	assert keyUnion("abc", "abd") == "abcd", keyUnion("abc", "abd")
+	assert keyUnion("abcN", "123") == "Nabc", keyUnion("abcN", "123")
+	assert keyUnion("abcN", "d123") == "Nabcd", keyUnion("abcN", "d123")
+	assert keyUnion("S", "asbcdk314") == "S", keyUnion("S", "asbcdk314")
+	assert keyUnion("A123", "abcdkN") == "AN", keyUnion("A123", "abcdkN")
+
+	print "All tests pass."
 

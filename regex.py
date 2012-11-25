@@ -2,6 +2,7 @@ from random import choice, seed
 import pydot
 from state import State
 
+DEBUG = False
 
 class Regex:
 	def __init__(self, str=None):
@@ -47,7 +48,7 @@ class Regex:
 			# lastState = nextState
 		lastState.accept_ = True
 
-		print "need to merge", list((s1.ID_, s2.ID_) for s1, s2 in self.mergeQueue_)
+		if DEBUG: print "need to merge", list((s1.ID_, s2.ID_) for s1, s2 in self.mergeQueue_)
 		while len(self.mergeQueue_) > 0:
 			s1, s2 = self.mergeQueue_.pop(0)
 			s1.merge(s2)
@@ -90,7 +91,7 @@ class Regex:
 		if ID1 is None or ID2 is None:
 			ID1 = choice(self.states_.keys())
 			ID2 = choice(list(a for a in self.states_.keys() if a != ID1))
-		print "Merging states", ID1, "and", ID2
+		if DEBUG: print "Merging states", ID1, "and", ID2
 		self.states_[ID1].merge(self.states_[ID2])
 		
 		while len(self.mergeQueue_) > 0:
@@ -149,18 +150,18 @@ if __name__ == '__main__':
 	# re.printGraph("output/test1-1.png")
 	# print "\n***about to add S"
 	# re.stringIs("S")
-	# re.printGraph("output/test1-2.png")	
+	# re.printGraph("output/test1-2.png")
 	# re.merge(0, 3)
-	# re.printGraph("output/test1-3.png")	
+	# re.printGraph("output/test1-3.png")
 	# re.merge(0, 5)
-	# re.printGraph("output/test1-4.png")	
+	# re.printGraph("output/test1-4.png")
 
 	# # test 2: should create the following cleanly (without orphans)
 	# seed(7)
 	# re = Regex("testa")
 	# re.stringIs("tesSa")
 	# re.stringIs("bootcamp")
-	# re.printGraph("output/merge0.png")	
+	# re.printGraph("output/merge0.png")
 	# for i in range(len(re.states_)):
 	# 	re.merge()
 	# 	print "*** Loop stage", (1 + i)
@@ -172,24 +173,23 @@ if __name__ == '__main__':
 	# re = Regex("testa")
 	# re.stringIs("tesSa")
 	# re.stringIs("bootcamp")
-	# re.printGraph("output/merge0.png")	
+	# re.printGraph("output/merge-0.png")
 	# for i in range(len(re.states_)):
 	# 	re.merge()
 	# 	print "\n*** Loop stage", (1 + i)
 	# 	re.printText()
-	# 	re.printGraph("output/merge%d.png"%(1 + i))
+	# 	re.printGraph("output/merge-%d.png"%(1 + i))
 
 	# test 4: should be Kleene star by merge9
 
 	# test 5: try out wildcards
-	# seed()
-	# re = Regex("testa")
-	# re.stringIs("tesSa")
-	# re.stringIs("bootcamp")
-	# re.printGraph("output/merge0.png")	
-	# for i in range(len(re.states_)):
-	# 	re.wildcardize()
-	# 	print "\n*** Loop stage", (1 + i)
-	# 	re.printText()
-	# 	re.printGraph("output/merge%d.png"%(1 + i))
-
+	seed()
+	re = Regex("testa")
+	re.stringIs("tesSa")
+	re.stringIs("bootcamp")
+	re.printGraph("output/merge0.png")
+	for i in range(len(re.states_)):
+		re.wildcardize()
+		print "\n*** Loop stage", (1 + i)
+		re.printText()
+		re.printGraph("output/merge%d.png"%(1 + i))
