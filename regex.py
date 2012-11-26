@@ -1,10 +1,11 @@
-from random import choice, seed
+from random import choice, seed, random
 from math import exp
 import pydot
 from state import State
 
 DEBUG = False
-ALPHA = 0.5
+ALPHA = 2
+PERMUTE_PROB = 0.5
 
 def floatEqual(f1, f2):
 	if abs(f1 - f2) < 0.00005:
@@ -12,13 +13,14 @@ def floatEqual(f1, f2):
 	return False
 
 class Regex:
-	def __init__(self, str=None):
+	def __init__(self, strings=None):
 		self.mergeQueue_ = list()
 		self.states_ = dict()
 		self.lastStateID_ = -1
 		self.start_ = None
-		if str is not None:
-			self.stringIs(str)
+		if strings is not None:
+			for string in strings:
+				self.stringIs(string)
 
 	def stateIs(self, state):
 		# assign ID if there isn't one
@@ -92,6 +94,10 @@ class Regex:
 		while len(self.mergeQueue_) > 0:
 			s1, s2 = self.mergeQueue_.pop(0)
 			s1.merge(s2)
+
+	def permuteRegex(self):
+		while (random()) < PERMUTE_PROB:
+			self.merge()
 
 	def wildcardize(self):
 		for s1 in self.states_.values():
