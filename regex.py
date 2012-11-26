@@ -1,8 +1,15 @@
 from random import choice, seed
+from math import exp
 import pydot
 from state import State
 
 DEBUG = False
+ALPHA = 0.5
+
+def floatEqual(f1, f2):
+	if abs(f1 - f2) < 0.00005:
+		return True
+	return False
 
 class Regex:
 	def __init__(self, str=None):
@@ -10,13 +17,17 @@ class Regex:
 		self.states_ = dict()
 		self.lastStateID_ = -1
 		self.start_ = None
-		if str:
+		if str is not None:
 			self.stringIs(str)
 
 	def stateIs(self, state):
-		self.lastStateID_ = self.lastStateID_ + 1
-		self.states_[self.lastStateID_] = state
-		state.ID_ = self.lastStateID_
+		# assign ID if there isn't one
+		if state.ID_ is None:
+			self.lastStateID_ = self.lastStateID_ + 1
+			state.ID_ = self.lastStateID_
+
+		# add state to map
+		self.states_[state.ID_] = state
 
 	def stateRemove(self, state):
 		assert state.ID_ != self.start_.ID_
@@ -43,9 +54,6 @@ class Regex:
 		for a in str:
 			nextState = State(self)
 			lastState = lastState.nextIs(a, nextState)
-			# nextState = State(self)
-			# lastState.nextIs(a, nextState)
-			# lastState = nextState
 		lastState.accept_ = True
 
 		if DEBUG: print "need to merge", list((s1.ID_, s2.ID_) for s1, s2 in self.mergeQueue_)
@@ -53,36 +61,23 @@ class Regex:
 			s1, s2 = self.mergeQueue_.pop(0)
 			s1.merge(s2)
 
-	def string(self, str):
-		state = self.start_
-		while len(str) != 0:
-			state = state.next(str[0])
-			str = str[1:]
-			if state is None:
-				return False
-
-		return state.accept_
-
-	def copyRegex(self):
-		copy = Regex(None)
+	def copy(self):
+		copyRegex = Regex(None)
 
 		# add all of the nodes
 		for ID, s in self.states_.items():
-			newState = State(self)
-			newState.accept_ = s.accept_
-			newState.ID_ = ID
-			copy.states_[ID] = newState
+			s.copy(copyRegex)
 
 		# add all of the edges
 		for ID, s1 in self.states_.items():
-			for k, s2 in s1.next_.items():
-				copy.states_[ID].nextIs(k, copy.states_[s2.ID_])
+			for k, s2 in s1.next_:
+				copyRegex.states_[ID].nextIs(k, copyRegex.states_[s2.ID_])
 
-		# set the start node
-		copy.lastStateID_ = self.lastStateID_
-		copy.start = copy.states_[self.start_.ID_]
+		# set the regex-level attributes
+		copyRegex.lastStateID_ = self.lastStateID_
+		copyRegex.start_ = copyRegex.states_[self.start_.ID_]
 
-		return copy
+		return copyRegex
 
 	def merge(self, ID1=None, ID2=None):
 		# return if only one state remains
@@ -101,6 +96,9 @@ class Regex:
 	def wildcardize(self):
 		for s1 in self.states_.values():
 			s1.wildcardize()
+		while len(self.mergeQueue_) > 0:
+			s1, s2 = self.mergeQueue_.pop(0)
+			s1.merge(s2)
 
 	def printText(self):
 		print "All states:", self.states_.keys()
@@ -143,6 +141,25 @@ class Regex:
 		# display graph
 		graph.write_png(filename)
 
+	def logPrior(self):
+		return - ALPHA * len(self.states_);
+
+	def string(self, str):
+		logLikelihood = 0
+		state = self.start_
+		while len(str) != 0:
+			logLikelihood += state.logLikelihood()
+			state = state.next(str[0])
+			str = str[1:]
+			if state is None:
+				return False, None
+
+		if state.accept_:
+			logLikelihood += state.logLikelihood()
+			return True, logLikelihood
+
+		return False, None
+
 if __name__ == '__main__':
 	# # test 1: should end in the Kleene star
 	# re = Regex("abc")
@@ -182,14 +199,56 @@ if __name__ == '__main__':
 
 	# test 4: should be Kleene star by merge9
 
-	# test 5: try out wildcards
-	seed()
-	re = Regex("testa")
-	re.stringIs("tesSa")
-	re.stringIs("bootcamp")
-	re.printGraph("output/merge0.png")
-	for i in range(len(re.states_)):
-		re.wildcardize()
-		print "\n*** Loop stage", (1 + i)
-		re.printText()
-		re.printGraph("output/merge%d.png"%(1 + i))
+	# # test 5: try out wildcards
+	# seed()
+	# re = Regex("testa")
+	# re.stringIs("tesSa")
+	# re.stringIs("bootcamp")
+	# re.printGraph("output/merge0.png")
+	# for i in range(len(re.states_)):
+	# 	re.wildcardize()
+	# 	print "\n*** Loop stage", (1 + i)
+	# 	re.printText()
+	# 	re.printGraph("output/merge%d.png"%(1 + i))
+
+	# # test 6: copy regex
+	# re = Regex("testa")
+	# re.stringIs("Sbesta")
+	# re2 = re.copy()
+	# re3 = re2.copy()
+	# re4 = re3.copy()
+	# re.printGraph("output/before.png")
+	# re4.printGraph("output/after.png")
+
+	# # test 7: log prior
+	# re = Regex("testa")
+	# re.stringIs("Sbesta")
+	# test = re.logPrior()
+	# assert test == - ALPHA * 11
+	# print "Passed log prior test."
+
+	# # test 8: likelihood
+	# re = Regex("testa")
+	# re.stringIs("besta")
+	# test1, test2 = re.string("testa")
+	# assert test1
+	# test2 = exp(test2)
+	# assert floatEqual(test2, 0.5), test2
+
+	# re = Regex("testa")
+	# re.stringIs("testab")
+	# test1, test2 = re.string("testa")
+	# assert test1
+	# test2 = exp(test2)
+	# assert floatEqual(test2, 0.5), test2
+
+	# re = Regex("")
+	# re.printGraph("output/before.png")
+	# re.stringIs("testa")
+	# re.printGraph("output/after.png")
+	# test1, test2 = re.string("testa")
+	# assert test1
+	# test2 = exp(test2)
+	# assert floatEqual(test2, 0.5), test2
+
+	print "Passed log prior test."

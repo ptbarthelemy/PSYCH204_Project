@@ -1,4 +1,5 @@
 from random import random
+from math import log
 
 WILDCARD_NUM = "N"
 SET_NUM = "0123456789"
@@ -33,22 +34,73 @@ def keyUnion(key1, key2):
 def keysOverlap(key1, key2):
 	return len(keyUnion(key1, key2)) < len(key1 + key2)
 
+def isKey(key):
+	if key == WILDCARD_ALL:
+		return True
+	if key == WILDCARD_ALPHA:
+		return True
+	if key == WILDCARD_NUM:
+		return True
+
+def keyIntersect(key1, key2):
+	result = set()
+	for a in key1:
+		for b in key2:
+			if keysOverlap(a, b):
+				if isKey(a):
+					result.add(b)
+				else:
+					result.add(a)
+
+	result = list(result)
+	result.sort()
+	return ''.join(result)
+
+def keyLen(key):
+	result = len(key)
+	if WILDCARD_ALL == key:
+		return len(SET_ALL)
+	if WILDCARD_ALPHA in key:
+		result += len(SET_ALPHA) - 1
+	if WILDCARD_NUM in key:
+		result += len(SET_NUM) - 1
+	return result
+
+def numOverlap(key1, key2):
+	return keyLen(keyIntersect(key1, key2))
+
+def keyChangeProb(k, wildcard):
+	return numOverlap(k, wildcard) * 1.0 / keyLen(wildcard)
+
 class State:
-	def __init__(self, regex, start=False):
+	def __init__(self, regex=None, start=False, ID=None):
 		self.prev_ = list() # maps key to all predecessors
 		self.next_ = list() # maps key to single successor
 		self.accept_ = False
-		self.ID_ = None
+		self.ID_ = ID
 		self.start_ = start
 		self.regex_ = regex
-		regex.stateIs(self)
-		pass
+		if regex is not None:
+			regex.stateIs(self)
+
+	def copy(self, regex=None):
+		result = State(regex=regex, start=self.start_, ID=self.ID_)
+		result.accept_ = self.accept_
+		return result
 
 	def next(self, letter):
 		for k, s in self.next_:
 			if keysOverlap(k, letter):
 				return s
 		return None
+
+	def logLikelihood(self):
+		options = 0
+		for k, s in self.next_:
+			options += keyLen(k)
+		if self.accept_:
+			options += 1
+		return - log(options)
 
 	# def prev(self, letter):
 	# 	return getFromLetterDict(self.prev_, letter)
@@ -140,37 +192,12 @@ class State:
 		# delete state
 		self.regex_.stateRemove(state)
 
-	def wildcardizeTransition(self, k, wildcard):
-		# set up charSet
-		count = 1.
-		if wildcard == WILDCARD_ALL:
-			charSet = SET_ALL
-			if k == WILDCARD_NUM:
-				count = len(SET_NUM)
-			elif k == WILDCARD_ALPHA:
-				count = len(SET_ALPHA)
-		elif wildcard == WILDCARD_ALPHA:
-			charSet = SET_ALPHA
-			if k not in charSet:
-				return False
-		elif wildcard == WILDCARD_NUM:
-			charSet = SET_NUM
-			if k not in charSet:
-				return False
-		else:
-			if DEBUG: print "Wildcard not recognized"
-
-		# do so probabilisitcally
-		if (random()) > count / len(charSet):
-			return False
-
-		self.nextIs(wildcard, state2)
-		return True
-
 	def wildcardize(self):
 		for k, s2 in self.next_:
-			for wildcard in [WILDCARD_NUM, WILDCARD_ALPHA, WILDCARD_ALL]:
-				self.wildcardizeTransition(k, wildcard)
+			for wildcard in [WILDCARD_ALL, WILDCARD_ALPHA, WILDCARD_NUM]:
+				if (random()) < keyChangeProb(k, wildcard):
+					self.nextIs(wildcard, self.next(k))
+					break
 
 
 if __name__ == '__main__':
@@ -182,6 +209,30 @@ if __name__ == '__main__':
 	assert keyUnion("abcN", "d123") == "Nabcd", keyUnion("abcN", "d123")
 	assert keyUnion("S", "asbcdk314") == "S", keyUnion("S", "asbcdk314")
 	assert keyUnion("A123", "abcdkN") == "AN", keyUnion("A123", "abcdkN")
+
+	# test keyintersect
+	test = keyIntersect("abcd", "A")
+	assert  test == "abcd", test
+	test = keyIntersect("A", "abcd1")
+	assert  test == "abcd", test
+	test = keyIntersect("AN", "abcd1")
+	assert  test == "1abcd", test
+	test = keyIntersect("S", "abcd1")
+	assert  test == "1abcd", test
+	test = keyIntersect("S", "abcdN")
+	assert  test == "Nabcd", test
+	test = keyIntersect("1234A", "abcN")
+	assert  test == "1234abc", test
+
+	# test keyLen
+	test = keyLen("abcd")
+	assert test == 4, test
+	test = keyLen("S")
+	assert test == len(SET_ALL), test
+	test = keyLen("abcdN")
+	assert test == 4 + len(SET_NUM), test
+	test = keyLen("A")
+	assert test == len(SET_ALPHA), test
 
 	print "All tests pass."
 
