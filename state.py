@@ -8,7 +8,7 @@ SET_ALPHA = "abcdefghijklmnopqrstuvwxyz"
 WILDCARD_ALL = "S"
 SET_ALL = "0123456789abcdefghijklmnopqrstuvwxyz -"
 
-DEBUG = True
+DEBUG = False
 
 def keyUnion(key1, key2):
 	# return a wildcard if applicable
@@ -102,34 +102,22 @@ class State:
 			options += 1
 		return - log(options)
 
-	def nextRemove(self, key, state=None):
-		if DEBUG: print "Removing transitions for", self.ID_, ":",key, ":"
+	def nextRemove(self, key, state):
+		if DEBUG: print "Removing transitions for", self.ID_, ":",key, ":", state.ID_
 		# remove forward pointer
-		index = 0
-		nextStates = list()
-		indices = list()
+		i = 0
 		for k, s in self.next_:
-			if keysOverlap(k, key):
-				newKey = ''.join(list(a for a in k if a not in key))
-				if newKey == "":
-					if DEBUG: print "...", s.ID_
-					nextStates.append(s)
-					indices.append(index)
-			index += 1
-		for i in reversed(indices):
-			del self.next_[i]
+			if k == key and s.ID_ == state.ID_:
+				del self.next_[i]
+			i += 1
 
 		# remove backward pointer
-		for nextState in nextStates:
-			index = 0
-			indices = list()
-			for k, s in nextState.prev_:
-				if keysOverlap(k, key) and s.ID_ == self.ID_:
-					indices.append(index)
-				index += 1
-
-			for i in reversed(indices):
-				del nextState.prev_[i]
+		i = 0
+		for k, s in state.prev_:
+			if k == key and s.ID_ == self.ID_:
+				del state.prev_[i]
+				break
+			i += 1
 
 	def nextIs(self, key, state):
 		if DEBUG: print "Inserting transition", self.ID_, ":", key, ":", state.ID_
@@ -137,8 +125,9 @@ class State:
 		# insert state, merge with existing transition to same state (if exists)
 		for k, s in self.next_:
 			if s.ID_ == state.ID_:
-				self.nextRemove(k)
 				key = keyUnion(key, k)
+				self.nextRemove(k, s)
+				if DEBUG: print "  replacing", k, "and original with", key
 		self.next_.append((key, state))
 		state.prev_.append((key, self))
 
@@ -173,7 +162,7 @@ class State:
 			s.nextRemove(k, state)
 			s.nextIs(k, self)
 
-		# add outgoing transitions (originally from state) to state1
+		# add outgoing transitions (originally from state) to self
 		if DEBUG: print "Adding outgoing transitions", list((k, s.ID_)
 					for k, s in state.next_)
 		for k, s in state.next_[:]:

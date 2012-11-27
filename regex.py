@@ -89,11 +89,9 @@ class Regex:
 			ID1 = choice(self.states_.keys())
 			ID2 = choice(list(a for a in self.states_.keys() if a != ID1))
 		if DEBUG: print "Merging states", ID1, "and", ID2
-		self.states_[ID1].merge(self.states_[ID2])
 		
-		# this would probably make the loop more obvious
-		#mergeQueue_.push(self.states_[ID1], self.states_[ID2])
-
+		# loop through all states
+		self.mergeQueue_.append((self.states_[ID1], self.states_[ID2]))
 		while len(self.mergeQueue_) > 0:
 			s1, s2 = self.mergeQueue_.pop(0)
 			s1.merge(s2)
@@ -170,61 +168,49 @@ class Regex:
 
 		return False, None
 
-if __name__ == '__main__':
-	# test 9: debug merging
-	seed(9)
-	strings = ['757-123', '757-134', '757-445', '757-915']
+
+def TestMerge(strings, seedVal=None):
+	if seedVal is not None:
+		seed(seedVal)
 	re = Regex(strings)
 	i = 0
 	while True:
-		# print stats
-		re.printText()
+		# re.printText()
 		re.printGraph("output/merge-%d.png" % i)
 		for string in strings:
 			accept, prob = re.string(string)
 			assert accept, "Error: base string was not accepted."
 		if len(re.states_) == 1:
 			break
-
-		# continue loop
-		print "\n*** Loop stage", i
+		# print "\n*** Loop stage", i
 		re.merge()
 		i += 1
 
-	# # test 1: should end in the Kleene star
-	# re = Regex(["abc","sS"])
-	# re.printGraph("output/test1-1.png")
-	# print "\n***about to add S"
-	# re.stringIs("S")
-	# re.printGraph("output/test1-2.png")
-	# re.merge(0, 3)
-	# re.printGraph("output/test1-3.png")
-	# re.merge(0, 1)
-	# re.printGraph("output/test1-4.png")
+def TestWildcardize(strings, seedVal=None):
+	if seedVal is not None:
+		seed(seedVal)
+	re = Regex(strings)
+	for i in range(10):
+		# re.printText()
+		re.printGraph("output/merge-%d.png" % i)
+		for string in strings:
+			accept, prob = re.string(string)
+			assert accept, "Error: base string was not accepted."
+		# print "\n*** Loop stage", i
+		re.wildcardize()
 
-	# # test 2: should create the following cleanly (without orphans)
-	# seed(7)
-	# re = Regex(["testa"])
-	# re.stringIs("tesSa")
-	# re.stringIs("bootcamp")
-	# re.printGraph("output/merge0.png")
-	# for i in range(len(re.states_)):
-	# 	re.merge()
-	# 	print "*** Loop stage", (1 + i)
-	# 	re.printText()
-	# 	re.printGraph("output/merge%d.png"%(1 + i))
+if __name__ == '__main__':
+	strings1 = ['757-123', '757-134', '757-445', '757-915'] 
+	strings2 = ["abc", "sS"] 
+	strings3 = ["testa", "tesSa", "bootcamp"]
 
-	# # test 3: should be Kleene star by merge9
-	# seed(5)
-	# re = Regex("testa")
-	# re.stringIs("tesSa")
-	# re.stringIs("bootcamp")
-	# re.printGraph("output/merge-0.png")
-	# for i in range(len(re.states_)):
-	# 	re.merge()
-	# 	print "\n*** Loop stage", (1 + i)
-	# 	re.printText()
-	# 	re.printGraph("output/merge-%d.png"%(1 + i))
+	TestMerge(strings1, 9)
+	TestMerge(strings2)
+	TestMerge(strings3)
+
+	TestWildcardize(strings1)
+	TestWildcardize(strings2)
+	TestWildcardize(strings3)
 
 	# test 4: should be Kleene star by merge9
 
