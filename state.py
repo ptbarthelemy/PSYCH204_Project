@@ -8,7 +8,7 @@ SET_ALPHA = "abcdefghijklmnopqrstuvwxyz"
 WILDCARD_ALL = "S"
 SET_ALL = "0123456789abcdefghijklmnopqrstuvwxyz -"
 
-DEBUG = False
+DEBUG = True
 
 def keyUnion(key1, key2):
 	# return a wildcard if applicable
@@ -102,9 +102,6 @@ class State:
 			options += 1
 		return - log(options)
 
-	# def prev(self, letter):
-	# 	return getFromLetterDict(self.prev_, letter)
-
 	def nextRemove(self, key, state=None):
 		if DEBUG: print "Removing transitions for", self.ID_, ":",key, ":"
 		# remove forward pointer
@@ -113,13 +110,9 @@ class State:
 		indices = list()
 		for k, s in self.next_:
 			if keysOverlap(k, key):
-				remove = False
-				if state is None:
-					remove = True
-				elif s.ID_ == state.ID_:
-					remove = True
-				if remove:
-					if DEBUG: print " ...", s.ID_
+				newKey = ''.join(list(a for a in k if a not in key))
+				if newKey == "":
+					if DEBUG: print "...", s.ID_
 					nextStates.append(s)
 					indices.append(index)
 			index += 1
@@ -139,7 +132,7 @@ class State:
 				del nextState.prev_[i]
 
 	def nextIs(self, key, state):
-		if DEBUG: print "Transition", self.ID_, ":", key, ":", state.ID_
+		if DEBUG: print "Inserting transition", self.ID_, ":", key, ":", state.ID_
 
 		# insert state, merge with existing transition to same state (if exists)
 		for k, s in self.next_:
@@ -158,7 +151,9 @@ class State:
 		return self.next(key)
 
 	def merge(self, state):
-		if DEBUG: print "Merging", self.ID_, "with", state.ID_
+		if DEBUG:
+			print "Merging", self.ID_, "with", state.ID_, ". Before merge:"
+			self.regex_.printText()
 		if self.ID_ == state.ID_:
 			if DEBUG: print "States are the same."
 			return
@@ -172,14 +167,14 @@ class State:
 			return
 
 		# add incoming transitions (originally to state) to self
-		if DEBUG: print "Changing incoming transitions", list((k, s.ID_)
+		if DEBUG: print "Adding incoming transitions", list((k, s.ID_)
 				for k, s in state.prev_)
 		for k, s in state.prev_[:]:
 			s.nextRemove(k, state)
 			s.nextIs(k, self)
 
 		# add outgoing transitions (originally from state) to state1
-		if DEBUG: print "Changing outgoing transitions", list((k, s.ID_)
+		if DEBUG: print "Adding outgoing transitions", list((k, s.ID_)
 					for k, s in state.next_)
 		for k, s in state.next_[:]:
 			state.nextRemove(k, s)
@@ -191,6 +186,10 @@ class State:
 
 		# delete state
 		self.regex_.stateRemove(state)
+
+		if DEBUG:
+			print "After merge:"
+			self.regex_.printText()
 
 	def wildcardize(self):
 		for k, s2 in self.next_:
@@ -209,6 +208,8 @@ if __name__ == '__main__':
 	assert keyUnion("abcN", "d123") == "Nabcd", keyUnion("abcN", "d123")
 	assert keyUnion("S", "asbcdk314") == "S", keyUnion("S", "asbcdk314")
 	assert keyUnion("A123", "abcdkN") == "AN", keyUnion("A123", "abcdkN")
+	test = keyUnion("-35", "23457")
+	assert test == "-23457", test
 
 	# test keyintersect
 	test = keyIntersect("abcd", "A")

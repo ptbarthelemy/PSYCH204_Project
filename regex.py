@@ -91,6 +91,9 @@ class Regex:
 		if DEBUG: print "Merging states", ID1, "and", ID2
 		self.states_[ID1].merge(self.states_[ID2])
 		
+		# this would probably make the loop more obvious
+		#mergeQueue_.push(self.states_[ID1], self.states_[ID2])
+
 		while len(self.mergeQueue_) > 0:
 			s1, s2 = self.mergeQueue_.pop(0)
 			s1.merge(s2)
@@ -107,6 +110,7 @@ class Regex:
 			s1.merge(s2)
 
 	def printText(self):
+		print "#Regex display"
 		print "All states:", self.states_.keys()
 		for state in self.states_.values():
 			print state.ID_, "accept:", state.accept_
@@ -167,21 +171,40 @@ class Regex:
 		return False, None
 
 if __name__ == '__main__':
+	# test 9: debug merging
+	seed(9)
+	strings = ['757-123', '757-134', '757-445', '757-915']
+	re = Regex(strings)
+	i = 0
+	while True:
+		# print stats
+		re.printText()
+		re.printGraph("output/merge-%d.png" % i)
+		for string in strings:
+			accept, prob = re.string(string)
+			assert accept, "Error: base string was not accepted."
+		if len(re.states_) == 1:
+			break
+
+		# continue loop
+		print "\n*** Loop stage", i
+		re.merge()
+		i += 1
+
 	# # test 1: should end in the Kleene star
-	# re = Regex("abc")
-	# re.stringIs("sS")
+	# re = Regex(["abc","sS"])
 	# re.printGraph("output/test1-1.png")
 	# print "\n***about to add S"
 	# re.stringIs("S")
 	# re.printGraph("output/test1-2.png")
 	# re.merge(0, 3)
 	# re.printGraph("output/test1-3.png")
-	# re.merge(0, 5)
+	# re.merge(0, 1)
 	# re.printGraph("output/test1-4.png")
 
 	# # test 2: should create the following cleanly (without orphans)
 	# seed(7)
-	# re = Regex("testa")
+	# re = Regex(["testa"])
 	# re.stringIs("tesSa")
 	# re.stringIs("bootcamp")
 	# re.printGraph("output/merge0.png")
@@ -257,4 +280,4 @@ if __name__ == '__main__':
 	# test2 = exp(test2)
 	# assert floatEqual(test2, 0.5), test2
 
-	print "Passed log prior test."
+	print "Passed all tests."

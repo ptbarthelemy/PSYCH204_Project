@@ -1,6 +1,6 @@
 from regex import Regex
 
-HSIZE = 10
+HSIZE = 1000
 class Inference:
 	def __init__(self, numH, strings):
 		self.hSpace_ = list()
@@ -38,6 +38,9 @@ class Inference:
 			self.hSpace_.append((re2, self.likelihood(re2)))
 
 if __name__ == '__main__':
+
+	# Test1: should recognize pattern in first 4 characters
+	# parameters: alpha = 2, permute_prob = 0.5
 	inf = Inference(HSIZE, ['757-123', '757-134', '757-445', '757-915'])
 	inf.baseH_.printGraph("output/inference/h1.png")
 	for i in range(10): 
