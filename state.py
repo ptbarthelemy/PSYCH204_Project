@@ -6,7 +6,7 @@ SET_NUM = "0123456789"
 WILDCARD_ALPHA = "A"
 SET_ALPHA = "abcdefghijklmnopqrstuvwxyz"
 WILDCARD_ALL = "S"
-SET_ALL = "0123456789abcdefghijklmnopqrstuvwxyz -"
+SET_ALL = "0123456789abcdefghijklmnopqrstuvwxyz -()"
 
 DEBUG = False
 
@@ -98,9 +98,7 @@ class State:
 		options = 0
 		for k, s in self.next_:
 			options += keyLen(k)
-		if self.accept_:
-			options += 1
-		return - log(options)
+		return - log(options), self.accept_
 
 	def nextRemove(self, key, state):
 		if DEBUG: print "Removing transitions for", self.ID_, ":",key, ":", state.ID_
@@ -128,6 +126,7 @@ class State:
 				key = keyUnion(key, k)
 				self.nextRemove(k, s)
 				if DEBUG: print "  replacing", k, "and original with", key
+				break
 		self.next_.append((key, state))
 		state.prev_.append((key, self))
 

@@ -1,16 +1,41 @@
 from random import choice, seed, random
-from math import exp
+from math import exp, log
 import pydot
 from state import State
 
 DEBUG = False
 ALPHA = 2
-PERMUTE_PROB = 0.5
+PERMUTE_PROB = 0.7
 
 def floatEqual(f1, f2):
 	if abs(f1 - f2) < 0.00005:
 		return True
 	return False
+
+def probOfSkippingAccept(n, lastAcceptChoice):
+	"""
+	Parameters:
+		- n is the number of accept states skipped.
+		- lastAcceptChoice is whether the string could have continued beyond
+		  the accept state.
+
+	Let tau be the probability of a string not being generated beyond an accept
+	state. Instead of setting tau, we can simply apply a uniform prior and
+	integrate over possible values. This gives us the formulas below:
+
+	if the string could have continued beyond the last accept state:
+		p(stopping at desired accept) = p(string match) (tau) (1 - tau)^n
+		marginalizing -->			  = p(string match) / (n^2 + 3n + 2)
+
+	otherwise:
+		p(stopping at desired accept) = p(string match) (1 - tau)^n
+		marginalizing -->			  = p(string match) / (n + 1)
+
+	This concept was explained in the Rational Rules paper, p. 6.
+	"""
+	if lastAcceptChoice:
+		return 1./(n**2 + 3*n + 2)
+	return 1./(n+1)
 
 class Regex:
 	def __init__(self, strings=None):
@@ -81,7 +106,7 @@ class Regex:
 
 		return copyRegex
 
-	def merge(self, ID1=None, ID2=None):
+	def mergeRandom(self, ID1=None, ID2=None):
 		# return if only one state remains
 		if len(self.states_) == 1:
 			return
@@ -98,11 +123,16 @@ class Regex:
 
 	def permuteRegex(self):
 		while (random()) < PERMUTE_PROB:
-			self.merge()
+			if (random()) < 0.5:
+				self.mergeRandom()
+			else:
+				self.wildcardize()
 
 	def wildcardize(self):
-		for s1 in self.states_.values():
-			s1.wildcardize()
+		# for s1 in self.states_.values():
+		# 	s1.wildcardize()
+
+		self.states_[choice(self.states_.keys())].wildcardize()
 		while len(self.mergeQueue_) > 0:
 			s1, s2 = self.mergeQueue_.pop(0)
 			s1.merge(s2)
@@ -154,17 +184,22 @@ class Regex:
 
 	def string(self, str):
 		logLikelihood = 0
+		numAcceptSkipped = 0
 		state = self.start_
 		while len(str) != 0:
-			logLikelihood += state.logLikelihood()
+			newLL, accept = state.logLikelihood()
+			logLikelihood += newLL
+			numAcceptSkipped += 1 if accept else 0
 			state = state.next(str[0])
 			str = str[1:]
 			if state is None:
 				return False, None
 
 		if state.accept_:
-			logLikelihood += state.logLikelihood()
-			return True, logLikelihood
+			lastAcceptChoice = False
+			if len(state.next_) > 0:
+				lastAcceptChoice = True
+			return True, logLikelihood + log(probOfSkippingAccept(numAcceptSkipped,lastAcceptChoice))
 
 		return False, None
 
@@ -183,7 +218,7 @@ def TestMerge(strings, seedVal=None):
 		if len(re.states_) == 1:
 			break
 		# print "\n*** Loop stage", i
-		re.merge()
+		re.mergeRandom()
 		i += 1
 
 def TestWildcardize(strings, seedVal=None):
@@ -205,65 +240,36 @@ if __name__ == '__main__':
 	strings3 = ["testa", "tesSa", "bootcamp"]
 
 	TestMerge(strings1, 9)
-	TestMerge(strings2)
-	TestMerge(strings3)
+	# TestMerge(strings2)
+	# TestMerge(strings3)
 
-	TestWildcardize(strings1)
-	TestWildcardize(strings2)
-	TestWildcardize(strings3)
+	# TestWildcardize(strings1)
+	# TestWildcardize(strings2)
+	# TestWildcardize(strings3)
 
-	# test 4: should be Kleene star by merge9
+	# log prior
+	re = Regex(["testa", "Sbesta"])
+	test = re.logPrior()
+	assert floatEqual(test, - ALPHA * 11), test
 
-	# # test 5: try out wildcards
-	# seed()
-	# re = Regex("testa")
-	# re.stringIs("tesSa")
-	# re.stringIs("bootcamp")
-	# re.printGraph("output/merge0.png")
-	# for i in range(len(re.states_)):
-	# 	re.wildcardize()
-	# 	print "\n*** Loop stage", (1 + i)
-	# 	re.printText()
-	# 	re.printGraph("output/merge%d.png"%(1 + i))
+	# likelihood
+	re = Regex(["testa", "besta"])
+	test1, test2 = re.string("testa")
+	assert test1
+	test2 = exp(test2)
+	assert floatEqual(test2, 0.5), test2
 
-	# # test 6: copy regex
-	# re = Regex("testa")
-	# re.stringIs("Sbesta")
-	# re2 = re.copy()
-	# re3 = re2.copy()
-	# re4 = re3.copy()
-	# re.printGraph("output/before.png")
-	# re4.printGraph("output/after.png")
+	re = Regex(["testa", "testab"])
+	test1, test2 = re.string("testa")
+	assert test1
+	test2 = exp(test2)
+	assert floatEqual(test2, 0.5), test2
 
-	# # test 7: log prior
-	# re = Regex("testa")
-	# re.stringIs("Sbesta")
-	# test = re.logPrior()
-	# assert test == - ALPHA * 11
-	# print "Passed log prior test."
-
-	# # test 8: likelihood
-	# re = Regex("testa")
-	# re.stringIs("besta")
-	# test1, test2 = re.string("testa")
-	# assert test1
-	# test2 = exp(test2)
-	# assert floatEqual(test2, 0.5), test2
-
-	# re = Regex("testa")
-	# re.stringIs("testab")
-	# test1, test2 = re.string("testa")
-	# assert test1
-	# test2 = exp(test2)
-	# assert floatEqual(test2, 0.5), test2
-
-	# re = Regex("")
-	# re.printGraph("output/before.png")
-	# re.stringIs("testa")
-	# re.printGraph("output/after.png")
-	# test1, test2 = re.string("testa")
-	# assert test1
-	# test2 = exp(test2)
-	# assert floatEqual(test2, 0.5), test2
+	re = Regex([""])
+	re.stringIs("testa")
+	test1, test2 = re.string("testa")
+	assert test1
+	test2 = exp(test2)
+	assert floatEqual(test2, 0.5), test2
 
 	print "Passed all tests."
