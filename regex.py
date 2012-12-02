@@ -4,7 +4,8 @@ import pydot
 from state import State
 
 DEBUG = False
-ALPHA = 2
+ALPHA = 0
+BETA = 0.7 #5# 11
 PERMUTE_PROB = 0.7
 
 def floatEqual(f1, f2):
@@ -113,6 +114,9 @@ class Regex:
 		if ID1 is None or ID2 is None:
 			ID1 = choice(self.states_.keys())
 			ID2 = choice(list(a for a in self.states_.keys() if a != ID1))
+		elif self.states_.get(ID1, None) is None or \
+			self.states_.get(ID2, None) is None:
+			return
 		if DEBUG: print "Merging states", ID1, "and", ID2
 		
 		# loop through all states
@@ -180,7 +184,11 @@ class Regex:
 		graph.write_png(filename)
 
 	def logPrior(self):
-		return - ALPHA * len(self.states_);
+		numTransitions = 0
+		for state in self.states_.values():
+			for key, _ in state.next_:
+				numTransitions += len(key)
+		return - ALPHA * len(self.states_) - BETA * numTransitions
 
 	def string(self, str):
 		logLikelihood = 0
