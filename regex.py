@@ -1,12 +1,14 @@
 from random import choice, seed, random
 from math import exp, log
 import pydot
-from state import State
+from state import State, keysOverlap, keyMinus, keyUnion, keyIntersect
 
 DEBUG = False
 ALPHA = 0
 BETA = 1.5
 PERMUTE_PROB = 0.7
+
+USE_SUBSET_CONSTRUCTION = True
 
 def floatEqual(f1, f2):
 	if abs(f1 - f2) < 0.00005:
@@ -48,6 +50,87 @@ class Regex:
 			for string in strings:
 				self.stringIs(string)
 
+	def subsetConstruction(self):
+		# copy old
+		old = self.copy()
+
+		# clear values
+		self.mergeQueue_ = list()
+		self.states_ = dict()
+		self.lastStateID_ = -1
+
+		# initialize DFA
+		self.start_ = State(regex=self, start=True)
+		self.start_.accept_ = old.start_.accept_
+		stateMapping = {0 : [0]}
+		stateQueue = [0]
+		while len(stateQueue) > 0:
+			stateID = stateQueue.pop(0)
+			state = self.states_[stateID]
+			if DEBUG: print "\nstate", stateID, "=", stateMapping[stateID]
+
+			# create distinct transitons
+			newNext = list()
+			for mappedID in stateMapping[stateID]:
+				for key1, nextStateID in list((key, s.ID_) for key,s in old.states_[mappedID].next_):
+					add = True
+					newNext2 = list()
+					for key2, nextStateIDs in newNext:
+						# if there is overlap, break transitions into pieces
+						if keysOverlap(key1, key2):
+							newNext2.append((keyIntersect(key1, key2), nextStateIDs + [nextStateID]))
+							if DEBUG: print "intersect leads to", (keyIntersect(key1, key2), nextStateIDs + [nextStateID])
+							temp = keyMinus(key2, key1)
+							if len(temp) > 0:
+								if DEBUG: print "modified to lead to", (temp, nextStateIDs)
+								newNext2.append((temp, nextStateIDs))
+							key1 = keyMinus(key1, key2)
+
+						# otherwise, keep the transition
+						else:
+							newNext2.append((key2, nextStateIDs))
+
+					if len(key1) > 0:
+						if DEBUG: print "added to lead to", (key1, [nextStateID])
+						newNext2.append((key1, [nextStateID]))
+					newNext = newNext2
+
+			if DEBUG: print "adding states", newNext
+
+			# add state mappings
+			for key, nextStateIDs1 in newNext:
+				addSet = True
+				# map to preexising state if there is one
+				for nextStateID2, nextStateIDs2 in stateMapping.items():
+					if set(nextStateIDs1) == set(nextStateIDs2):
+						addSet = False
+						state.nextIs(key, self.states_[nextStateID2])
+						break
+
+				# otherwise, create one
+				if addSet:
+					newState = State(self)
+					state.nextIs(key, newState)
+					stateMapping[newState.ID_] = nextStateIDs1
+					for mappedID in nextStateIDs1:
+						newState.accept_ = old.states_[mappedID].accept_
+						if newState.accept_:
+							break
+					stateQueue.append(newState.ID_)
+
+	def mergeRest(self):
+		while len(self.mergeQueue_) > 0:
+			s1, s2 = self.mergeQueue_.pop(0)
+			s1.merge(s2)
+
+	def makeDFA(self):
+		if len(self.mergeQueue_) == 0:
+			return
+		if USE_SUBSET_CONSTRUCTION:
+			self.subsetConstruction()
+		else:
+			self.mergeRest()
+
 	def stateIs(self, state):
 		# assign ID if there isn't one
 		if state.ID_ is None:
@@ -85,9 +168,9 @@ class Regex:
 		lastState.accept_ = True
 
 		if DEBUG: print "need to merge", list((s1.ID_, s2.ID_) for s1, s2 in self.mergeQueue_)
-		while len(self.mergeQueue_) > 0:
-			s1, s2 = self.mergeQueue_.pop(0)
-			s1.merge(s2)
+		self.printGraph("output/before.png")
+		self.makeDFA()
+		self.printGraph("output/after.png")
 
 	def copy(self):
 		copyRegex = Regex(None)
@@ -119,11 +202,10 @@ class Regex:
 			return
 		if DEBUG: print "Merging states", ID1, "and", ID2
 		
-		# loop through all states
-		self.mergeQueue_.append((self.states_[ID1], self.states_[ID2]))
-		while len(self.mergeQueue_) > 0:
-			s1, s2 = self.mergeQueue_.pop(0)
-			s1.merge(s2)
+		# merge states and resolve transition violations
+		self.states_[ID1].merge(self.states_[ID2])
+		self.makeDFA()
+
 
 	def permuteRegex(self):
 		while (random()) < PERMUTE_PROB:
@@ -133,13 +215,8 @@ class Regex:
 				self.wildcardize()
 
 	def wildcardize(self):
-		# for s1 in self.states_.values():
-		# 	s1.wildcardize()
-
 		self.states_[choice(self.states_.keys())].wildcardize()
-		while len(self.mergeQueue_) > 0:
-			s1, s2 = self.mergeQueue_.pop(0)
-			s1.merge(s2)
+		self.makeDFA()
 
 	def printText(self):
 		print "#Regex display"
@@ -218,14 +295,17 @@ def TestMerge(strings, seedVal=None):
 	re = Regex(strings)
 	i = 0
 	while True:
-		# re.printText()
+		re.printText()
 		re.printGraph("output/merge-%d.png" % i)
 		for string in strings:
 			accept, prob = re.string(string)
-			assert accept, "Error: base string was not accepted."
+			if not accept:
+				re.printGraph("output/error.png")
+				re.printText()
+				assert False, "Error: base string was not accepted: %s."% string
 		if len(re.states_) == 1:
 			break
-		# print "\n*** Loop stage", i
+		print "\n*** Loop stage", i
 		re.mergeRandom()
 		i += 1
 
@@ -238,21 +318,31 @@ def TestWildcardize(strings, seedVal=None):
 		re.printGraph("output/wildcard-%d.png" % i)
 		for string in strings:
 			accept, prob = re.string(string)
-			assert accept, "Error: base string was not accepted."
+			if not accept:
+				re.printGraph("output/error.png")
+				re.printText()
+				assert False, "Error: base string was not accepted: %s."% string
 		# print "\n*** Loop stage", i
 		re.wildcardize()
 
 if __name__ == '__main__':
-	# strings1 = ['757-123', '757-134', '757-445', '757-915'] 
+
+	# strings = ['ab', 'abc']
+	# re = Regex(strings)
+	# re.printGraph("output/done.png")
+	# re.mergeRandom(1,2)
+	# re.printGraph("output/after.png")
+
+	strings1 = ['757-123', '757-134', '757-445', '757-915'] 
 	strings2 = ["abbey", "abbot"] 
 	# strings3 = ["testa", "tesSa", "bootcamp"]
 
-	# TestMerge(strings1, 9)
+	TestMerge(strings1, 9)
 	TestMerge(strings2)
 	# TestMerge(strings3)
 
-	# TestWildcardize(strings1)
-	# TestWildcardize(strings2)
+	TestWildcardize(strings1)
+	TestWildcardize(strings2)
 	# TestWildcardize(strings3)
 
 	# # log prior

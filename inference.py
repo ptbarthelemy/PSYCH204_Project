@@ -85,6 +85,7 @@ class Inference:
 			accept, LL = re.string(string)
 			if not accept:
 				print "Error, regex does not accept string", string
+				re.printText()
 				re.printGraph("output/inference/error.png")
 				assert False
 			result += LL
@@ -102,7 +103,7 @@ class Inference:
 		self.hSpace_.extend(newH)
 
 if __name__ == '__main__':
-	print "%e"%numRegexes(25)
+	# print "%e"%numRegexes(25)
 
 	###########################################################################
 	# wild card fitting

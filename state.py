@@ -42,6 +42,30 @@ def isKey(key):
 	if key == WILDCARD_NUM:
 		return True
 
+def removeWildcards(key):
+	result = set()
+	if WILDCARD_NUM in key:
+		result.add(SET_NUM)
+		key = list((a) for a in key if a != WILDCARD_NUM)
+	if WILDCARD_ALPHA in key:
+		result.add(SET_ALPHA)
+		key = list((a) for a in key if a != WILDCARD_ALPHA)
+	if WILDCARD_ALL in key:
+		result.add(SET_ALL)
+		key = list((a) for a in key if a != WILDCARD_ALL)
+	for a in key:
+		result.add(a)
+	result = list(result)
+	result.sort()
+	return ''.join(result)
+
+def keyMinus(key1, key2):
+	key1 = set(removeWildcards(key1))
+	key2 = set(removeWildcards(key2))
+	result = list(key1.difference(key2))
+	result.sort()
+	return ''.join(result)
+
 def keyIntersect(key1, key2):
 	result = set()
 	for a in key1:
@@ -222,6 +246,18 @@ if __name__ == '__main__':
 	assert test == 4 + len(SET_NUM), test
 	test = keyLen("A")
 	assert test == len(SET_ALPHA), test
+
+	# test keyMinus
+	test = keyMinus("abc", "dbc")
+	assert test == "a", test
+	test = keyMinus("abc", "S")
+	assert test == "", test
+	test = keyMinus("A", "A")
+	assert test == "", test
+	test = keyMinus("S", "AN")
+	assert test == " ()-", test
+	test = keyMinus("S", "a")
+	assert test == " ()-0123456789bcdefghijklmnopqrstuvwxyz", test
 
 	print "All tests pass."
 
