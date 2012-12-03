@@ -5,7 +5,7 @@ from state import State
 
 DEBUG = False
 ALPHA = 0
-BETA = 0.7 #5# 11
+BETA = 1.5
 PERMUTE_PROB = 0.7
 
 def floatEqual(f1, f2):
@@ -235,7 +235,7 @@ def TestWildcardize(strings, seedVal=None):
 	re = Regex(strings)
 	for i in range(10):
 		# re.printText()
-		re.printGraph("output/merge-%d.png" % i)
+		re.printGraph("output/wildcard-%d.png" % i)
 		for string in strings:
 			accept, prob = re.string(string)
 			assert accept, "Error: base string was not accepted."
@@ -243,41 +243,41 @@ def TestWildcardize(strings, seedVal=None):
 		re.wildcardize()
 
 if __name__ == '__main__':
-	strings1 = ['757-123', '757-134', '757-445', '757-915'] 
-	strings2 = ["abc", "sS"] 
-	strings3 = ["testa", "tesSa", "bootcamp"]
+	# strings1 = ['757-123', '757-134', '757-445', '757-915'] 
+	strings2 = ["abbey", "abbot"] 
+	# strings3 = ["testa", "tesSa", "bootcamp"]
 
-	TestMerge(strings1, 9)
-	# TestMerge(strings2)
+	# TestMerge(strings1, 9)
+	TestMerge(strings2)
 	# TestMerge(strings3)
 
 	# TestWildcardize(strings1)
 	# TestWildcardize(strings2)
 	# TestWildcardize(strings3)
 
-	# log prior
-	re = Regex(["testa", "Sbesta"])
-	test = re.logPrior()
-	assert floatEqual(test, - ALPHA * 11), test
+	# # log prior
+	# re = Regex(["testa", "Sbesta"])
+	# test = re.logPrior()
+	# assert floatEqual(test, - ALPHA * 11), test
 
-	# likelihood
-	re = Regex(["testa", "besta"])
-	test1, test2 = re.string("testa")
-	assert test1
-	test2 = exp(test2)
-	assert floatEqual(test2, 0.5), test2
+	# # likelihood
+	# re = Regex(["testa", "besta"])
+	# test1, test2 = re.string("testa")
+	# assert test1
+	# test2 = exp(test2)
+	# assert floatEqual(test2, 0.5), test2
 
-	re = Regex(["testa", "testab"])
-	test1, test2 = re.string("testa")
-	assert test1
-	test2 = exp(test2)
-	assert floatEqual(test2, 0.5), test2
+	# re = Regex(["testa", "testab"])
+	# test1, test2 = re.string("testa")
+	# assert test1
+	# test2 = exp(test2)
+	# assert floatEqual(test2, 0.5), test2
 
-	re = Regex([""])
-	re.stringIs("testa")
-	test1, test2 = re.string("testa")
-	assert test1
-	test2 = exp(test2)
-	assert floatEqual(test2, 0.5), test2
+	# re = Regex([""])
+	# re.stringIs("testa")
+	# test1, test2 = re.string("testa")
+	# assert test1
+	# test2 = exp(test2)
+	# assert floatEqual(test2, 0.5), test2
 
 	print "Passed all tests."

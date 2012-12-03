@@ -102,9 +102,33 @@ class Inference:
 		self.hSpace_.extend(newH)
 
 if __name__ == '__main__':
-	# print "%e"%numRegexes(25)
+	print "%e"%numRegexes(25)
 
-	strings = ['abc', 'dbc', 'ebc', 'abc', 'dbc']
+	###########################################################################
+	# wild card fitting
+
+	# 70% chance to accept ilts.
+	# if alpha is zero, beta needs to be >= 5 to accept test string
+	# strings = ["glts", "elts", "glts", "flts"] 
+
+	# 40% chance to accept ffg.
+	# if alpha is zero, beta needs to be < 3 to reject test string
+	# strings = ['efg', 'hfg', 'ifg']
+
+	# 30% chance to accept bho
+	# if alpha is zero, beta needs to be < 14 to reject test string
+	# strings = ['bhi', 'bhw', 'bhi', 'bhw', 'bhw'] 
+
+	###########################################################################
+	# kleene star fitting
+	# 90% chance of accepting abbb
+	# if alpha is zero, beta must be greater than 2
+	# strings = ['ab', 'abb']
+
+	# 80% chance of accepting aoooo
+	# if alpha is zero, beta must be greater than 1.5
+	# strings = ['ao', 'aoo', 'aooo']
+
 	inf = Inference(HSIZE, strings)
 	for i in range(10): 
 		print "Iteration", i

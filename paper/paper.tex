@@ -20,6 +20,7 @@
 
 \documentclass[10pt,letterpaper]{article}
 
+\usepackage{mathtools}
 \usepackage{cogsci}
 \usepackage{pslatex}
 \usepackage{apacite}
@@ -41,17 +42,87 @@
 
 
 \begin{abstract}
-The abstract should be one paragraph, indented 1/8~inch on both sides,
-in 9~point font with single spacing. The heading {\bf Abstract} should
-be 10~point, bold, centered, with one line space below it. This
-one-paragraph abstract section is required only for standard spoken
-papers and standard posters (i.e., those presentations that will be
-represented by six page papers in the Proceedings).
+Regular expressions are used to define strings that match a certain pattern. In the following experiment, we posit that the means by which humans judge similarity of words can be represented by a method of inference using regular expressions. In short, there is a tradeoff of generality and specificity that allows for a selection of an optimal regular expression to categorize a list of input strings.
 
 \textbf{Keywords:} 
-Add your choice of indexing terms or keywords; kindly use a semi-colon; between each term.
+Model inference, regular expression, anti-unification.
 \end{abstract}
 
+
+\section{Overview and Motivation}
+
+\section{Inference over Regular Expressions}
+
+\subsection{Balancing Generality with Specificity}
+The goal of inference is to select a regular expression with the highest posterior probability. The posterior probability is proportional to the product of the hypothesis' prior probability and its likelihood.
+\begin{align*}
+	p(h|S) \propto p(h) p(S|h)
+\end{align*}
+Above, $S$ represents the set of input strings. We provide an equation for the prior probability such that our model biases smaller hypotheses, and the likelihood of generating a given hypothesis is inveresly proportional to its expressiveness. So, our model aims to balance generality with specificity.
+
+\subsection{Hypothesis Representation: DFA}
+Regular expressions are equivalent to deterministic finite automata (DFA).\footnote{See the Appendix for a brief summary of our regex notation.} DFA are often easier to reason with, and are thus used as the dominant representation for regexes throughout this paper.
+
+To extract the likelihood of a hypothesis, probabilities are assigned to transitions. For our purposes, we assumed uniform probability across each potential transition. That is, in the regular exression \verb!a[b|c]!, $p(\verb!ab!)=p(\verb!ac!)=1/2$.
+
+Further, we needed to define the probability with which a DFA would stop generating a string. For instance, given the regular expression \verb!a*!, we would need to define the probability of generating strings \verb!a!, \verb!aa!, \verb!aaa!, etc.
+
+In this sense, our DFA is similar to a probabilistic automaton, although the acceptance criteria is $\tau=0$, so the languages represented by our DFA are still regular. [Citation]. A second difference is that there is no concept of stopping string generation in probabilistic automaton.
+
+\subsection{Generating Hypotheses}
+The hypothesis space is initiated with the base hypothesis, the term applied to a DFA that accepts strictly the input strings. Next, hypotheses are added to the hypothesis space through two processes of generalization: merging and applying wildcards.
+
+\subsubsection{Merging} Merging is the process of combining states of a DFA. The newly create state has all incoming and outgoing transitions of its predecessors. Thus, the DFA will continue to accept the same set of strings as the original DFA. However, the DFA will often accept more strings after merging, thus merging states results in a more generalized DFA.
+
+If merging is continued, the DFA will eventually have only one state with all transitions leading to itself. Such a state accepts all strings containing only zero or more of the original characters.
+
+Because DFA have only one transition for any state and character, it is possible that merging two states will require further merging. This results in a chain-reaction of merging as shown in Figure~\ref{merge-figure}.
+
+\begin{figure}[ht]
+\begin{center}
+\begin{align*}
+\text{(a)}\includegraphics[scale=0.4]{merge-0.png}
+&\text{(b)}\includegraphics[scale=0.4]{merge-1.png}
+&\text{(c)}\includegraphics[scale=0.4]{merge-2.png}
+\end{align*}
+\end{center}
+\caption{An example of state merging. The DFA starts at state 0 and accepts only at the shaded states. The base hypothesis accepts ``b'' and ``ab'' (a). After merging states 0 and 2, the next DFA accepts an infinite set of strings (b). Finally, the merge of states 0 and 1 forces the merge of state 0 and 3 to maintain one unique outbound transition for any state and character (c).} 
+\label{merge-figure}
+\end{figure}
+
+[mention anti-unification]
+
+\subsubsection{Wildcards} Wildcards generalize the DFA by extending state transitions to apply to a class of characters. The replacement of transition characters with wildcards might also cause chain merging, as shown in Figure~\ref{wildcard-figure}.
+
+\begin{figure}[ht]
+\begin{center}
+\begin{align*}
+\text{(a)}\includegraphics[scale=0.4]{wildcard-0.png}
+&\text{(b)}\includegraphics[scale=0.4]{wildcard-1.png}
+\end{align*}
+\end{center}
+\caption{An example of inserting a wildcard, ``A'', which represents any character. Replacing a wildcard for one of the outbound transitions of state 0 has forced a merge of states 1 and 3.} 
+\label{wildcard-figure}
+\end{figure}
+
+\subsection{Searching the Hypothesis Space} The number of hypotheses grows quickly with the number of states in the base hypothesis. As a lower bound, the number of hypotheses is at least as large as the number of possible starting nodes. Because the starting node could be merged with any subset of the remaining $n-1$ nodes in the DFA, there are $2^{n-1}=O(2^n)$ possible start states. Thus, the hypothesis space is at least exponential in the number of starting nodes in the regular expression.\footnote{See the Appendix for detailed sizing of the hypothesis space.}
+
+\section{Inference with DFA}
+\subsection{Prior Probability}
+We assigned the prior probability to the hypotheses (i.e. regexes) based on the size of the DFA and the number of transitions. In the following equation, $|S|$ is the number of states in the DFA and $|T|$ is the number of tranisitons in the DFA, where a wildcard counts as only one transition. 
+\begin{align*}
+	P(h) \propto e^{-\alpha|S| - \beta|T|}
+\end{align*}
+Thus, we have biased smaller DFA that use wildcards instead of literal characters.
+
+\subsection{Likelihood}
+In assigning probabilities to state transitions and string acceptance, one can turn a DFA into a generative automaton. To simplify inference, we assume uniform probability over all possible state transitions. So, the probability of generating a string is simply the product of the transitions taken to arrive at that string. 
+
+For the cases in which a string may alternatively be accepted or continue (e.g. \verb!ab*! can generate \verb!ab! or \verb!abb!), one must assign a probability for accepting or continuing the string. Let $\tau$ be the probability that the regex stops extending the string. Instead of leaving $\tau$ as a parameter of the model, we assume a uniform prior over the parameter and marginalize it when calculating the likelihood of a string. [citation]
+
+\section{Experiment Design and Model Fitting}
+
+\section{Results and Discussion}
 
 \section{General Formatting Instructions}
 
@@ -210,5 +281,35 @@ volume, respectively.
 
 \bibliography{CogSci_Template}
 
+\section{Appendix: Technical Notes}
+\subsection{Regex and DFA Notation}
+We used a limited alphabet wherein normal characters are all lower case. We also used the following rules to define regular expressions.
+\begin{enumerate}
+	\item Acceptance of specific strings is represented as concatenated characters. E.g. \verb!abc! accepts only \verb!abc!.
+	\item Acceptance of disjunctive strings is represnted by \verb![a|b]!. E.g. \verb![abc|c]!accepts only \verb!abc! and \verb!c!.
+	\item Acceptance of any character is represented by the wildcard \verb!?!. E.g. \verb!a?! accepts \verb!aa!, \verb!ab!, \verb!ac!, etc.
+	\item Acceptance of the empty string is represented by \verb!E!. \verb!Ea! is the same as \verb!a!.
+	\item Acceptance of any sequence repeated zero or more times is represented by the Kleene star, \verb!a*!. E.g. \verb!a*! accepts \verb!E!, \verb!a!, \verb!aa!, etc, 
+\end{enumerate}
+
+\subsection{Sizing the Hypothesis Space}
+Ignoring wildcards and assuming that no chain-reaction merges occur, each hypothesis can be defined as a set of mutually exclusive subsets of the states contained in the base hypothesis. For instance, given states $s_1, s_2, s_3$, the possible hypotheses are:
+	\begin{align*}
+		&s_1, s_2, s_3
+		\\&\text{merge}(s_1, s_2), s_3
+		\\&\text{merge}(s_1, s_3), s_2
+		\\&\text{merge}(s_2, s_3), s_1
+		\\&\text{merge}(s_1, s_2, s_3)
+	\end{align*}
+To generalize this to a case of $n_b$ states in the base hypothesis, one can consider individually the number of regexes with $n_f$ states in the finished regex. For the cases where $n_b=n_f$ or $n_f=1$, it is easy to verify that there exist only one regex. When creating hypotheses where $1 < n_f < n_b$, however, one can simply look to the case of $n_b - 1$. In particular, for every $n_f$, one can simply duplicate all of the hypotheses from the $n_b - 1$ case with an additional unmerged state $s_{n_b}$. Further, one can add a new hypothesis for each subset of the hypotheses in the $n_s-1, n_f$ case. So, the expression for the total number of regexes given the number of states in the base hypothesis is given by $g(n_b)$.
+	\begin{align*}
+	f(a, b) &= \left\{
+			\begin{array}{cl}
+         		1 & a=b \vee b=1 \\
+         		f(a-1, b-1) + b f(a-1, b) & \mbox{otherwise}
+            \end{array}\right.
+		\\ g(n_b) &=\sum_{n_f=1}^{n_b} f(n_b, n_f)
+	\end{align*}
+One of our experiment examples contained 25 nodes in the base hypothesis, which means that the hypothesis space is $g(25)\approx 5.0 \times 10^{17}$ regular expressions. Needless to say, it is intractable to exhaustively search the hypothesis space.
 
 \end{document}
