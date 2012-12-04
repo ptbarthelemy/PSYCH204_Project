@@ -4,8 +4,8 @@ import pydot
 from state import State, keysOverlap, keyMinus, keyUnion, keyIntersect
 
 DEBUG = False
-ALPHA = 0
-BETA = 1.5
+ALPHA = 1
+BETA = 4
 PERMUTE_PROB = 0.7
 
 USE_SUBSET_CONSTRUCTION = True
@@ -49,6 +49,43 @@ class Regex:
 		if strings is not None:
 			for string in strings:
 				self.stringIs(string)
+
+
+	def equalTo(self, other):
+		if self.start_.ID_ != other.start_.ID_:
+			return False
+		for stateID in self.states_.keys():
+			# check that state exists
+			if other.states_.get(stateID) == None:
+				return False
+
+			# check acceptance
+			if self.states_[stateID].accept_ != other.states_[stateID].accept_:
+				return False
+
+			# check outbound transitions
+			if len(self.states_[stateID].next_) != len(other.states_[stateID].next_):
+				return False
+			for key1, nextStateID1 in list((key, s.ID_) for key, s in self.states_[stateID].next_):
+				agree = False
+				for key2, nextStateID2 in list((key, s.ID_) for key, s in other.states_[stateID].next_):
+					if key1 == key2 and nextStateID1 == nextStateID2:
+						agree = True
+				if not agree:
+					return False
+
+			# check inbound transitions
+			if len(self.states_[stateID].prev_) != len(other.states_[stateID].prev_):
+				return False
+			for key1, nextStateID1 in list((key, s.ID_) for key, s in self.states_[stateID].prev_):
+				agree = False
+				for key2, nextStateID2 in list((key, s.ID_) for key, s in other.states_[stateID].prev_):
+					if key1 == key2 and nextStateID1 == nextStateID2:
+						agree = True
+				if not agree:
+					return False
+
+		return True
 
 	def subsetConstruction(self):
 		# copy old
@@ -214,8 +251,10 @@ class Regex:
 			else:
 				self.wildcardize()
 
-	def wildcardize(self):
-		self.states_[choice(self.states_.keys())].wildcardize()
+	def wildcardize(self, stateID=None, wildcard=None):
+		if stateID is None:
+			stateID = choice(self.states_.keys())
+		self.states_[stateID].wildcardize(wildcard)
 		self.makeDFA()
 
 	def printText(self):

@@ -1,4 +1,4 @@
-from random import random
+from random import random, choice
 from math import log
 
 WILDCARD_NUM = "N"
@@ -122,6 +122,8 @@ class State:
 		options = 0
 		for k, s in self.next_:
 			options += keyLen(k)
+		if options == 0:
+			return 0, False
 		return - log(options), self.accept_
 
 	def nextRemove(self, key, state):
@@ -173,8 +175,8 @@ class State:
 			or self.ID_ not in self.regex_.states_.keys() :
 			if DEBUG: print "State no longer exists."
 			return			
-		if state.start_:
-			if DEBUG: print "Reordering so start state is first."
+		if self.ID_ > state.ID_:
+			if DEBUG: print "Reordering so smaller state is first."
 			state.merge(self)
 			return
 
@@ -203,12 +205,23 @@ class State:
 			print "After merge:"
 			self.regex_.printText()
 
-	def wildcardize(self):
+	def wildcardize(self, wildcard=None):
+		if len(self.next_) == 0:
+			return
+
+		# use the wildcard given, if there is one
+		if wildcard is not None:
+			for k, s2 in self.next_:
+				if keysOverlap(wildcard, k):
+					self.nextIs(wildcard, s2)
+					return
+			return
+
+		# otherwise, pick a key at random
+		keychoice = choice(list((k) for k, _ in self.next_))
 		for k, s2 in self.next_:
-			for wildcard in [WILDCARD_ALL, WILDCARD_ALPHA, WILDCARD_NUM]:
-				if (random()) < keyChangeProb(k, wildcard):
-					self.nextIs(wildcard, self.next(k))
-					break
+			if keychoice == k:
+				self.nextIs(choice([WILDCARD_ALL, WILDCARD_ALPHA, WILDCARD_NUM]), self.next(k))
 
 
 if __name__ == '__main__':
