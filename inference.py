@@ -73,7 +73,7 @@ class Inference:
 
 		# remove extra hypotheses
 		self.sortHypotheses()
-		self.cullHypotheses()
+		# self.cullHypotheses()
 
 	def generateAll(self):
 		print "Generating hypothesis for", len(self.baseH_.states_), "states."
@@ -177,12 +177,26 @@ class Inference:
 
 			# copy best hypotheses to old beam
 			newBeam = sorted(newBeam, key=lambda array: -array[1])
-			newBeam[0][0].printGraph("output/beam-iter-%d.png"%i)
 			while len(beam) < BEAM_SIZE and len(newBeam) > 0:
-				beam.append(newBeam.pop(0))
+				re1, prob1 = newBeam.pop(0)
+				# add = True
+				# for re2, prob2 in beam:
+				# 	if re1.equalTo(re2):
+				# 		add = False
+				# 		break
+				# if add:
+				if True:
+					beam.append((re1, prob1))
+
+			beam[0][0].printGraph("output/beam-iter-%d-1.png"%i)
+			beam[1][0].printGraph("output/beam-iter-%d-2.png"%i)
+			beam[2][0].printGraph("output/beam-iter-%d-3.png"%i)
+			beam[3][0].printGraph("output/beam-iter-%d-4.png"%i)
+			beam[4][0].printGraph("output/beam-iter-%d-5.png"%i)
 
 			# add hypotheses in beam to hset, clear newbeam
 			self.addRegexes(beam)
+			self.addRegexes(newBeam)
 			newBeam = list()
 
 if __name__ == '__main__':
@@ -217,13 +231,13 @@ if __name__ == '__main__':
 
 	# 80% chance of accepting aoooo
 	# if alpha is zero, beta must be greater than 1.5
-	# strings = ['ao', 'aoo', 'aooo']
+	strings = ['ao', 'aoo', 'aooo']
 
 	###########################################################################
 	# test, beam search
 	# strings = ['abc', 'adc', 'adce'] # test for abce
 	# strings = ['zze', 'zzq', 'zze'] # test for 'zzo'
-	strings = ['htuu', 'ntuu', 'htuu', 'xtuu', 'ztuu', 'xtuu', 'ztuu'] # test for jtuu
+	# strings = ['htuu', 'ntuu', 'htuu', 'xtuu', 'ztuu', 'xtuu', 'ztuu'] # test for jtuu
 	# strings = ['yyyt', 'yt', 'yyyt', 'yyyt', 'yt'] # test for 'yyt'
 	# strings = ['lp', 'lllp', 'llp', 'llllp', 'llp', 'lllp'] # test for 'lllllp'
 	# strings = ['zdill', 'ddill', 'ddill', 'zdill', 'ddill', 'zdill'] # test for gdill
@@ -237,10 +251,11 @@ if __name__ == '__main__':
 	inf.hSpace_[3][0].printGraph("output/inference/trial-end-best-4.png")
 	inf.hSpace_[4][0].printGraph("output/inference/trial-end-best-5.png")
 
-	print "accept %0.3f%%" % (inf.testString("jtuu") * 100)
+	print "accept %0.3f%%" % (inf.testString("aooo") * 100)
 
 
 	###########################################################################
+	# test, random search
 	# inf = Inference(HSIZE, strings)
 	# for i in range(5): 
 	# 	print "Iteration:", i, "hypotheses:", len(inf.hSpace_)

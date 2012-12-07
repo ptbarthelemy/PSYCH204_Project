@@ -161,8 +161,8 @@ class Regex:
 			s1.merge(s2)
 
 	def makeDFA(self):
-		if len(self.mergeQueue_) == 0:
-			return
+		# if len(self.mergeQueue_) == 0:
+		# 	return
 		if USE_SUBSET_CONSTRUCTION:
 			self.subsetConstruction()
 		else:
@@ -205,9 +205,7 @@ class Regex:
 		lastState.accept_ = True
 
 		if DEBUG: print "need to merge", list((s1.ID_, s2.ID_) for s1, s2 in self.mergeQueue_)
-		self.printGraph("output/before.png")
 		self.makeDFA()
-		self.printGraph("output/after.png")
 
 	def copy(self):
 		copyRegex = Regex(None)

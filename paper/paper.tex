@@ -45,11 +45,12 @@
 Regular expressions are used to define strings that match a certain pattern. In the following experiment, we posit that the means by which humans judge similarity of words can be represented by a method of inference using regular expressions. In short, there is a tradeoff of generality and specificity that allows for a selection of an optimal regular expression to categorize a list of input strings.
 
 \textbf{Keywords:} 
-Model inference, regular expression, anti-unification.
+Model inference, regular expression.
 \end{abstract}
 
 
 \section{Overview and Motivation}
+% TODO: fill this in
 
 \section{Inference over Regular Expressions}
 
@@ -69,14 +70,14 @@ Further, we needed to define the probability with which a DFA would stop generat
 
 In this sense, our DFA is similar to a probabilistic automaton, although the acceptance criteria is $\tau=0$, so the languages represented by our DFA are still regular. [Citation]. A second difference is that there is no concept of stopping string generation in probabilistic automaton.
 
+% TODO: explain character scope!
+
 \subsection{Generating Hypotheses}
 The hypothesis space is initiated with the base hypothesis, the term applied to a DFA that accepts strictly the input strings. Next, hypotheses are added to the hypothesis space through two processes of generalization: merging and applying wildcards.
 
 \subsubsection{Merging} Merging is the process of combining states of a DFA. The newly create state has all incoming and outgoing transitions of its predecessors. Thus, the DFA will continue to accept the same set of strings as the original DFA. However, the DFA will often accept more strings after merging, thus merging states results in a more generalized DFA.
 
-If merging is continued, the DFA will eventually have only one state with all transitions leading to itself. Such a state accepts all strings containing only zero or more of the original characters.
-
-Because DFA have only one transition for any state and character, it is possible that merging two states will require further merging. This results in a chain-reaction of merging as shown in Figure~\ref{merge-figure}.
+If merging is continued, the DFA will eventually have only one state with all transitions leading to itself. Such a state accepts all strings containing only zero or more of the original characters. A series of merges are illustrated in Figure~\ref{merge-figure}.
 
 \begin{figure}[ht]
 \begin{center}
@@ -90,9 +91,9 @@ Because DFA have only one transition for any state and character, it is possible
 \label{merge-figure}
 \end{figure}
 
-[mention anti-unification]
+% TODO: mention anti-unification
 
-\subsubsection{Wildcards} Wildcards generalize the DFA by extending state transitions to apply to a class of characters. The replacement of transition characters with wildcards might also cause chain merging, as shown in Figure~\ref{wildcard-figure}.
+\subsubsection{Wildcards} Wildcards generalize the DFA by extending state transitions to apply to a class of characters. Figure~\ref{wildcard-figure} illustrates an example of this.
 
 \begin{figure}[ht]
 \begin{center}
@@ -105,181 +106,291 @@ Because DFA have only one transition for any state and character, it is possible
 \label{wildcard-figure}
 \end{figure}
 
-\subsection{Searching the Hypothesis Space} The number of hypotheses grows quickly with the number of states in the base hypothesis. As a lower bound, the number of hypotheses is at least as large as the number of possible starting nodes. Because the starting node could be merged with any subset of the remaining $n-1$ nodes in the DFA, there are $2^{n-1}=O(2^n)$ possible start states. Thus, the hypothesis space is at least exponential in the number of starting nodes in the regular expression.\footnote{See the Appendix for detailed sizing of the hypothesis space.}
+\subsubsection{Enforcing Determinism} Merging states and replacing transitions with wildcards can allow one state to have non-unique outbound transitions. However, this turns our representation into a nondeterministic finite automaton (NFA) instead of a DFA. Both are equivalent, but the latter afford easier manipulation for our experiment. Thus, to convert the NFA back to a DFA, we use the subset construction, the effect of which is illustrated in both Figure~\ref{merge-figure} and Figure~\ref{wildcard-figure}.
+
+\subsection{Searching the Hypothesis Space} The number of hypotheses grows quickly with the number of states in the base hypothesis. As a lower bound, the number of hypotheses is at least as large as the number of possible starting nodes. Because the starting node could be merged with any subset of the remaining $n-1$ nodes in the DFA, there are $2^{n-1}=O(2^n)$ possible start states. Thus, the hypothesis space is at least exponential in the number of starting nodes in the regular expression.
+
+Similarly, the number of possible regex variants created by simply replacing transitions with wildcards is given by $2^m$ where $m$ is the number of transitions. Thus, simply modifying expressions to include wildcards is also exponential.
+
+An upper bound for the complexity of model merging is much more extreme. Performing subset construction for an NFA with $n$ states can produce, in the worst case, a DFA with $2^n$ states. Assuming that any subset of these states also produces a valid DFA, we can have at most $2^{2^n-1}$ DFA.
+% \footnote{See the Appendix for detailed sizing of the hypothesis space.} Actually, this seems inaccurate.
+
+We resolve this issue by performing beam search, which is essentially depth first search that explores only the most promising hypothses. In our case, the most promising hypotheses were defined as those with the highest posterior probability. 
 
 \section{Inference with DFA}
+The posterior probability for a DFA as a hypothesis is given by the following.
+\begin{align*}
+	p(h|S) \propto p(S|h)p(h)
+\end{align*}
+Thus, inferring the best DFA given a set of input strings was essentially a problem in balancing simplicity with conservation of belief. That is, DFA were biased a priori for being simpler, but simpler DFA tended to accept more strings.
+
 \subsection{Prior Probability}
 We assigned the prior probability to the hypotheses (i.e. regexes) based on the size of the DFA and the number of transitions. In the following equation, $|S|$ is the number of states in the DFA and $|T|$ is the number of tranisitons in the DFA, where a wildcard counts as only one transition. 
 \begin{align*}
 	P(h) \propto e^{-\alpha|S| - \beta|T|}
 \end{align*}
-Thus, we have biased smaller DFA that use wildcards instead of literal characters.
+Thus, we have biased smaller DFA that use wildcards instead of literal characters. [cite Program Merging model]
 
 \subsection{Likelihood}
-In assigning probabilities to state transitions and string acceptance, one can turn a DFA into a generative automaton. To simplify inference, we assume uniform probability over all possible state transitions. So, the probability of generating a string is simply the product of the transitions taken to arrive at that string. 
+To define the likelihood of producing certain strings, we turn a DFA into a generative automaton that has a probability of generating a given string. Letting the input strings be independent, the probability of generating strings $S$ is equal to the product of the probabilities of generating each string.
+\begin{align*}
+	p(S) = \prod_{s \in S} p(s)
+\end{align*}
 
-For the cases in which a string may alternatively be accepted or continue (e.g. \verb!ab*! can generate \verb!ab! or \verb!abb!), one must assign a probability for accepting or continuing the string. Let $\tau$ be the probability that the regex stops extending the string. Instead of leaving $\tau$ as a parameter of the model, we assume a uniform prior over the parameter and marginalize it when calculating the likelihood of a string. [citation]
+Let the $s$ be the concatenation of characters $a_1a_2...a_n$. We define the probability of generating a string as the product of the probability of generating the letters in sequence $p(a_1a_2...a_n)$ and the product of stopping the string generation on an accept state $p(\text{stop})$.
+\begin{align*}
+	p(s) = p(a_1a_2...a_n)p(\text{stop})
+\end{align*}
+
+We define the probability of generating the characters as the product of the probabilities of making each state transition over each state.
+\begin{align*}
+	p(a_1a_2 ... a_n) = \prod_{i=1}^{n}p(\delta(r_i, a_{i+1}))
+\end{align*}
+where $r_i$ is the state reached after the first $i-1$ characters, and $r_1$ is the start state.
+
+To simplify inference, we assume uniform probability over all possible state transitions. Formally, the probability of making a state transition is given by:
+\begin{align*}
+	p(\delta(r_i, a_{i+1})) &= \frac{1}{\sum_{a\in A} 1\{\delta(r_i, a)\}}
+\end{align*}
+Notice that the denominator counts the number of characters for which a transition is defined. In the case of a wildcard, the transition is defined for all 26 letters.
+
+For the cases in which a string may alternatively be accepted or continue, one must assign a probability for accepting or continuing the string. For instance, consider the DFA in part (c) of Figure~\ref{merge-figure}. The DFA may generate the empty string, \verb!E!, or it may generate any arbitrary string with \verb!a! and \verb!b!, like \verb!ababbba!. We define the probability of stopping at a given string to be a fixed value $\tau$. This makes shorter strings more likely to be generated.
+
+Instead of leaving $\tau$ as a parameter of the model, we assume a uniform prior over the parameter and marginalize it when calculating the likelihood of a string. So, let $b$ be the number of times the DFA skipped an accept state before accepting. That is, $b$ is given by the equation below, where $F$ is the set of accept states.
+\begin{align*}
+	b = \sum_{i=1}^{n-1} 1 \{ r_i \in F\}
+\end{align*}
+
+% TODO: Cite this
+
+The probability of stopping at an accept state is given by the equation below. The condition $\exists a : \delta(r_n, a)$ indicates that there is an outbound transition for the accept state of the string.
+\begin{align*}
+	p(\text{stop}) &= \left\{
+		\begin{array}{rl}
+		\tau (1-\tau)^b & r_n \in F \wedge \exists a : \delta(r_n, a)
+		\\ (1-\tau)^b & r_n \in F \wedge \not \exists a : \delta(r_n, a)
+		\\ 0 & \text{otherwise}
+		\end{array}
+		\right.
+\end{align*}
+
+Marginalizing over all possible values of $\tau$, we have:
+\begin{align*}
+	\int_0^1 \tau (1-\tau)^b &= \frac{1}{b^2+3b+1}
+	\\ \int_0^1 (1-\tau)^b &= \frac{1}{b+1}
+\end{align*}
+
+Our equation for $p(\text{stop})$ is thus:
+\begin{align*}
+	p(\text{stop}) &= \left\{
+		\begin{array}{rl}
+		\frac{1}{b^2+3b+1} & \in F \wedge \exists a : \delta(r_n, a)
+		\\ \frac{1}{b+1} & \in F \wedge \not \exists a : \delta(r_n, a)
+		\\ 0 & \text{otherwise}
+		\end{array}
+		\right.
+\end{align*}
 
 \section{Experiment Design and Model Fitting}
+\subsection{Parameter Fitting}
+The only parameters that needed fitting were $\alpha$ and $\beta$ of the prior probability. A subset of the experimental questions were used to fit the parameter values, and the rest were tested using these fitted paramters.
 
-\section{Results and Discussion}
+Because the role of $\beta$ had the effect of biasing models with fewer transitions, it also had a tendency to bias regular expressions with fewer states. For instance, the $\beta$ term would prefer the regular expression \verb!a*! over \verb!aaaa!. Thus, this term was fitted before fitting the $\alpha$ term.
 
-\section{General Formatting Instructions}
+To fit the $\beta$ term, we observed experiments that would indicate the transition point between a preference for generality over specificity for wildcard-based experiments (e.g. the first two experiments outlined in Table~\ref{parameter-table}). Utilizing the fact that increasing the number of repeated samples decreases the likelihood of a wildcard, and decreasing the length of the sample strings would increases the likelihood of a wildcard, the first two experiments suggest a decision point. That is, if the DFA model is a valid representation of the subjects' responses, then the $\beta$ term should be between $3$ and $5$. For further experimentation, we fixed it at $4$.
 
-For standard spoken papers and standard posters, the entire contribution (including figures, references, everything) can be no longer than six pages. For abstract posters, the entire contribution can be no longer than one page. For symposia, the entire contribution can be no longer than two pages.
+Fitting the $\alpha$ term was less clear. In particular, the desired behavior was easily abserved with $\alpha=0,\beta=4$. However, a term of $\alpha=1$ was used to bias hypotheses with fewer states given the same number of transitions.
 
-The text of the paper should be formatted in two columns with an
-overall width of 7 inches (17.8 cm) and length of 9.25 inches (23.5
-cm), with 0.25 inches between the columns. Leave two line spaces
-between the last author listed and the text of the paper. The left
-margin should be 0.75 inches and the top margin should be 1 inch.
-\textbf{The right and bottom margins will depend on whether you use
-  U.S. letter or A4 paper, so you must be sure to measure the width of
-  the printed text.} Use 10~point Times Roman with 12~point vertical
-spacing, unless otherwise specified.
-
-The title should be in 14~point, bold, and centered. The title should
-be formatted with initial caps (the first letter of content words
-capitalized and the rest lower case). Each author's name should appear
-on a separate line, 11~point bold, and centered, with the author's
-email address in parentheses. Under each author's name list the
-author's affiliation and postal address in ordinary 10~point type.
-
-Indent the first line of each paragraph by 1/8~inch (except for the
-first paragraph of a new section). Do not add extra vertical space
-between paragraphs.
-
-
-\section{First-Level Headings}
-
-First level headings should be in 12~point, initial caps, bold and
-centered. Leave one line space above the heading and 1/4~ line space
-below the heading.
-
-
-\subsection{Second-Level Headings}
-
-Second level headings should be 11~point, initial caps, bold, and
-flush left. Leave one line space above the heading and 1/4~ line
-space below the heading.
-
-
-\subsubsection{Third-Level Headings}
-
-Third-level headings should be 10~point, initial caps, bold, and flush
-left. Leave one line space above the heading, but no space after the
-heading.
-
-
-\section{Formalities, Footnotes, and Floats}
-
-Use standard APA citation format. Citations within the text should
-include the author's last name and year. If the authors' names are
-included in the sentence, place only the year in parentheses, as in
-\citeA{NewellSimon1972a}, but otherwise place the entire reference in
-parentheses with the authors and year separated by a comma
-\cite{NewellSimon1972a}. List multiple references alphabetically and
-separate them by semicolons
-\cite{ChalnickBillman1988a,NewellSimon1972a}. Use the
-et~al. construction only after listing all the authors to a
-publication in an earlier reference and for citations with four or
-more authors.
-
-
-\subsection{Footnotes}
-
-Indicate footnotes with a number\footnote{Sample of the first
-  footnote.} in the text. Place the footnotes in 9~point type at the
-bottom of the page on which they appear. Precede the footnote with a
-horizontal rule.\footnote{Sample of the second footnote.}
-
-
-\subsection{Tables}
-
-Number tables consecutively; place the table number and title (in
-10~point) above the table with one line space above the caption and
-one line space below it, as in Table~\ref{sample-table}. You may float
-tables to the top or bottom of a column, set wide tables across both
-columns.
+% TODO: move this?
+For future work, more experiments could be used to fit the model paramters.
 
 \begin{table}[!ht]
 \begin{center} 
-\caption{Sample table title.} 
-\label{sample-table} 
+\caption{Parameter fitting experiments} 
+\label{parameter-table} 
 \vskip 0.12in
-\begin{tabular}{ll} 
+\begin{tabular}{llll} 
 \hline
-Error type    &  Example \\
-\hline
-Take smaller        &   63 - 44 = 21 \\
-Always borrow~~~~   &   96 - 42 = 34 \\
-0 - N = N           &   70 - 47 = 37 \\
-0 - N = 0           &   70 - 47 = 30 \\
-\hline
+Input  & Test & Subject Accept & Model Accept
+% \\ \hline
+% bhi, bhw, bhi, & bho & 30\% & $\beta < 14$
+% \\ bhw, bhw
+\\ \hline
+efg, hfg, ifg & ffg & 45\% & $\beta > 3$
+\\ \hline
+glts, elts, glts, & ilts & 70\% & $\beta > 5$
+\\ flts
+\\ \hline
+ab, abb & abbb & 90\% & $\alpha = 0, \beta = 4$
+\\ \hline
+ao, aoo, aooo & aoooo & 80\% & $\alpha = 0, \beta=4$
+\\ \hline
 \end{tabular} 
 \end{center} 
 \end{table}
 
+\section{Results and Discussion}
+Mention:
 
-\subsection{Figures}
+- all-or-none behavior of the algorithm, which is likely encouraged by the fact that there didn't seem to be huge diversity in the final hypothesis set. That is, many of the most likely DFA were similarly structured
+\section{Conclusion and Future Work}
 
-All artwork must be very dark for purposes of reproduction and should
-not be hand drawn. Number figures sequentially, placing the figure
-number and caption, in 10~point, after the figure with one line space
-above the caption and one line space below it, as in
-Figure~\ref{sample-figure}. If necessary, leave extra white space at
-the bottom of the page to avoid splitting the figure and figure
-caption. You may float figures to the top or bottom of a column, or
-set wide figures across both columns.
+% \section{General Formatting Instructions}
 
-\begin{figure}[ht]
-\begin{center}
-\fbox{CoGNiTiVe ScIeNcE}
-\end{center}
-\caption{This is a figure.} 
-\label{sample-figure}
-\end{figure}
+% For standard spoken papers and standard posters, the entire contribution (including figures, references, everything) can be no longer than six pages. For abstract posters, the entire contribution can be no longer than one page. For symposia, the entire contribution can be no longer than two pages.
 
+% The text of the paper should be formatted in two columns with an
+% overall width of 7 inches (17.8 cm) and length of 9.25 inches (23.5
+% cm), with 0.25 inches between the columns. Leave two line spaces
+% between the last author listed and the text of the paper. The left
+% margin should be 0.75 inches and the top margin should be 1 inch.
+% \textbf{The right and bottom margins will depend on whether you use
+%   U.S. letter or A4 paper, so you must be sure to measure the width of
+%   the printed text.} Use 10~point Times Roman with 12~point vertical
+% spacing, unless otherwise specified.
 
-\section{Acknowledgments}
+% The title should be in 14~point, bold, and centered. The title should
+% be formatted with initial caps (the first letter of content words
+% capitalized and the rest lower case). Each author's name should appear
+% on a separate line, 11~point bold, and centered, with the author's
+% email address in parentheses. Under each author's name list the
+% author's affiliation and postal address in ordinary 10~point type.
 
-Place acknowledgments (including funding information) in a section at
-the end of the paper.
-
-
-\section{References Instructions}
-
-Follow the APA Publication Manual for citation format, both within the
-text and in the reference list, with the following exceptions: (a) do
-not cite the page numbers of any book, including chapters in edited
-volumes; (b) use the same format for unpublished references as for
-published ones. Alphabetize references by the surnames of the authors,
-with single author entries preceding multiple author entries. Order
-references by the same authors by the year of publication, with the
-earliest first.
-
-Use a first level section heading for the reference list. Use a
-hanging indent style, with the first line of the reference flush
-against the left margin and subsequent lines indented by 1/8~inch.
-Below are example references for a conference paper, book chapter,
-journal article, technical report, dissertation, book, and edited
-volume, respectively.
-
-\nocite{ChalnickBillman1988a}
-\nocite{Feigenbaum1963a}
-\nocite{Hill1983a}
-\nocite{OhlssonLangley1985a}
-\nocite{Lewis1978a}
-\nocite{NewellSimon1972a}
-\nocite{ShragerLangley1990a}
+% Indent the first line of each paragraph by 1/8~inch (except for the
+% first paragraph of a new section). Do not add extra vertical space
+% between paragraphs.
 
 
-\bibliographystyle{apacite}
+% \section{First-Level Headings}
 
-\setlength{\bibleftmargin}{.125in}
-\setlength{\bibindent}{-\bibleftmargin}
+% First level headings should be in 12~point, initial caps, bold and
+% centered. Leave one line space above the heading and 1/4~ line space
+% below the heading.
 
-\bibliography{CogSci_Template}
+
+% \subsection{Second-Level Headings}
+
+% Second level headings should be 11~point, initial caps, bold, and
+% flush left. Leave one line space above the heading and 1/4~ line
+% space below the heading.
+
+
+% \subsubsection{Third-Level Headings}
+
+% Third-level headings should be 10~point, initial caps, bold, and flush
+% left. Leave one line space above the heading, but no space after the
+% heading.
+
+
+% \section{Formalities, Footnotes, and Floats}
+
+% Use standard APA citation format. Citations within the text should
+% include the author's last name and year. If the authors' names are
+% included in the sentence, place only the year in parentheses, as in
+% \citeA{NewellSimon1972a}, but otherwise place the entire reference in
+% parentheses with the authors and year separated by a comma
+% \cite{NewellSimon1972a}. List multiple references alphabetically and
+% separate them by semicolons
+% \cite{ChalnickBillman1988a,NewellSimon1972a}. Use the
+% et~al. construction only after listing all the authors to a
+% publication in an earlier reference and for citations with four or
+% more authors.
+
+
+% \subsection{Footnotes}
+
+% Indicate footnotes with a number\footnote{Sample of the first
+%   footnote.} in the text. Place the footnotes in 9~point type at the
+% bottom of the page on which they appear. Precede the footnote with a
+% horizontal rule.\footnote{Sample of the second footnote.}
+
+
+% \subsection{Tables}
+
+% Number tables consecutively; place the table number and title (in
+% 10~point) above the table with one line space above the caption and
+% one line space below it, as in Table~\ref{sample-table}. You may float
+% tables to the top or bottom of a column, set wide tables across both
+% columns.
+
+% \begin{table}[!ht]
+% \begin{center} 
+% \caption{Sample table title.} 
+% \label{sample-table} 
+% \vskip 0.12in
+% \begin{tabular}{ll} 
+% \hline
+% Error type    &  Example \\
+% \hline
+% Take smaller        &   63 - 44 = 21 \\
+% Always borrow~~~~   &   96 - 42 = 34 \\
+% 0 - N = N           &   70 - 47 = 37 \\
+% 0 - N = 0           &   70 - 47 = 30 \\
+% \hline
+% \end{tabular} 
+% \end{center} 
+% \end{table}
+
+
+% \subsection{Figures}
+
+% All artwork must be very dark for purposes of reproduction and should
+% not be hand drawn. Number figures sequentially, placing the figure
+% number and caption, in 10~point, after the figure with one line space
+% above the caption and one line space below it, as in
+% Figure~\ref{sample-figure}. If necessary, leave extra white space at
+% the bottom of the page to avoid splitting the figure and figure
+% caption. You may float figures to the top or bottom of a column, or
+% set wide figures across both columns.
+
+% \begin{figure}[ht]
+% \begin{center}
+% \fbox{CoGNiTiVe ScIeNcE}
+% \end{center}
+% \caption{This is a figure.} 
+% \label{sample-figure}
+% \end{figure}
+
+
+% \section{Acknowledgments}
+
+% Place acknowledgments (including funding information) in a section at
+% the end of the paper.
+
+
+% \section{References Instructions}
+
+% Follow the APA Publication Manual for citation format, both within the
+% text and in the reference list, with the following exceptions: (a) do
+% not cite the page numbers of any book, including chapters in edited
+% volumes; (b) use the same format for unpublished references as for
+% published ones. Alphabetize references by the surnames of the authors,
+% with single author entries preceding multiple author entries. Order
+% references by the same authors by the year of publication, with the
+% earliest first.
+
+% Use a first level section heading for the reference list. Use a
+% hanging indent style, with the first line of the reference flush
+% against the left margin and subsequent lines indented by 1/8~inch.
+% Below are example references for a conference paper, book chapter,
+% journal article, technical report, dissertation, book, and edited
+% volume, respectively.
+
+% \nocite{ChalnickBillman1988a}
+% \nocite{Feigenbaum1963a}
+% \nocite{Hill1983a}
+% \nocite{OhlssonLangley1985a}
+% \nocite{Lewis1978a}
+% \nocite{NewellSimon1972a}
+% \nocite{ShragerLangley1990a}
+
+
+% \bibliographystyle{apacite}
+
+% \setlength{\bibleftmargin}{.125in}
+% \setlength{\bibindent}{-\bibleftmargin}
+
+% \bibliography{CogSci_Template}
 
 \section{Appendix: Technical Notes}
 \subsection{Regex and DFA Notation}
@@ -292,24 +403,24 @@ We used a limited alphabet wherein normal characters are all lower case. We also
 	\item Acceptance of any sequence repeated zero or more times is represented by the Kleene star, \verb!a*!. E.g. \verb!a*! accepts \verb!E!, \verb!a!, \verb!aa!, etc, 
 \end{enumerate}
 
-\subsection{Sizing the Hypothesis Space}
-Ignoring wildcards and assuming that no chain-reaction merges occur, each hypothesis can be defined as a set of mutually exclusive subsets of the states contained in the base hypothesis. For instance, given states $s_1, s_2, s_3$, the possible hypotheses are:
-	\begin{align*}
-		&s_1, s_2, s_3
-		\\&\text{merge}(s_1, s_2), s_3
-		\\&\text{merge}(s_1, s_3), s_2
-		\\&\text{merge}(s_2, s_3), s_1
-		\\&\text{merge}(s_1, s_2, s_3)
-	\end{align*}
-To generalize this to a case of $n_b$ states in the base hypothesis, one can consider individually the number of regexes with $n_f$ states in the finished regex. For the cases where $n_b=n_f$ or $n_f=1$, it is easy to verify that there exist only one regex. When creating hypotheses where $1 < n_f < n_b$, however, one can simply look to the case of $n_b - 1$. In particular, for every $n_f$, one can simply duplicate all of the hypotheses from the $n_b - 1$ case with an additional unmerged state $s_{n_b}$. Further, one can add a new hypothesis for each subset of the hypotheses in the $n_s-1, n_f$ case. So, the expression for the total number of regexes given the number of states in the base hypothesis is given by $g(n_b)$.
-	\begin{align*}
-	f(a, b) &= \left\{
-			\begin{array}{cl}
-         		1 & a=b \vee b=1 \\
-         		f(a-1, b-1) + b f(a-1, b) & \mbox{otherwise}
-            \end{array}\right.
-		\\ g(n_b) &=\sum_{n_f=1}^{n_b} f(n_b, n_f)
-	\end{align*}
-One of our experiment examples contained 25 nodes in the base hypothesis, which means that the hypothesis space is $g(25)\approx 5.0 \times 10^{17}$ regular expressions. Needless to say, it is intractable to exhaustively search the hypothesis space.
+% \subsection{Sizing the Hypothesis Space}
+% Ignoring wildcards and assuming that no chain-reaction merges occur, each hypothesis can be defined as a set of mutually exclusive subsets of the states contained in the base hypothesis. For instance, given states $s_1, s_2, s_3$, the possible hypotheses are:
+% 	\begin{align*}
+% 		&s_1, s_2, s_3
+% 		\\&\text{merge}(s_1, s_2), s_3
+% 		\\&\text{merge}(s_1, s_3), s_2
+% 		\\&\text{merge}(s_2, s_3), s_1
+% 		\\&\text{merge}(s_1, s_2, s_3)
+% 	\end{align*}
+% To generalize this to a case of $n_b$ states in the base hypothesis, one can consider individually the number of regexes with $n_f$ states in the finished regex. For the cases where $n_b=n_f$ or $n_f=1$, it is easy to verify that there exist only one regex. When creating hypotheses where $1 < n_f < n_b$, however, one can simply look to the case of $n_b - 1$. In particular, for every $n_f$, one can simply duplicate all of the hypotheses from the $n_b - 1$ case with an additional unmerged state $s_{n_b}$. Further, one can add a new hypothesis for each subset of the hypotheses in the $n_s-1, n_f$ case. So, the expression for the total number of regexes given the number of states in the base hypothesis is given by $g(n_b)$.
+% 	\begin{align*}
+% 	f(a, b) &= \left\{
+% 			\begin{array}{cl}
+%          		1 & a=b \vee b=1 \\
+%          		f(a-1, b-1) + b f(a-1, b) & \mbox{otherwise}
+%             \end{array}\right.
+% 		\\ g(n_b) &=\sum_{n_f=1}^{n_b} f(n_b, n_f)
+% 	\end{align*}
+% One of our experiment examples contained 25 nodes in the base hypothesis, which means that the hypothesis space is $g(25)\approx 5.0 \times 10^{17}$ regular expressions. Needless to say, it is intractable to exhaustively search the hypothesis space.
 
 \end{document}
