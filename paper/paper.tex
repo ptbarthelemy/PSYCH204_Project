@@ -1,22 +1,6 @@
 % 
-% Annual Cognitive Science Conference
-% Sample LaTeX Paper -- Proceedings Format
-% 
+% Annual Cognitive Science Conference Format
 
-% Original : Ashwin Ram (ashwin@cc.gatech.edu)       04/01/1994
-% Modified : Johanna Moore (jmoore@cs.pitt.edu)      03/17/1995
-% Modified : David Noelle (noelle@ucsd.edu)          03/15/1996
-% Modified : Pat Langley (langley@cs.stanford.edu)   01/26/1997
-% Latex2e corrections by Ramin Charles Nakisa        01/28/1997 
-% Modified : Tina Eliassi-Rad (eliassi@cs.wisc.edu)  01/31/1998
-% Modified : Trisha Yannuzzi (trisha@ircs.upenn.edu) 12/28/1999 (in process)
-% Modified : Mary Ellen Foster (M.E.Foster@ed.ac.uk) 12/11/2000
-% Modified : Ken Forbus                              01/23/2004
-% Modified : Eli M. Silk (esilk@pitt.edu)            05/24/2005
-% Modified: Niels Taatgen (taatgen@cmu.edu) 10/24/2006
-
-%% Change ``a4paper'' in the following line to ``letterpaper'' if you are
-%% producing a letter-format document.
 
 \documentclass[10pt,letterpaper]{article}
 
@@ -26,7 +10,7 @@
 \usepackage{apacite}
 
 
-\title{Using Regular Expressions to Define String Groups}
+\title{A Bayesian Framework for Learning Regular Expressions}
  
 \author{{\large \bf{P. Thomas Barthelemy} (bartho@stanford.edu)} \\
   Department of Computer Science, 353 Serra Mall \\
@@ -42,7 +26,7 @@
 
 
 \begin{abstract}
-Regular expressions are used to define strings that match a certain pattern. In the following experiment, we posit that the means by which humans judge similarity of words can be represented by a method of inference using regular expressions. In short, there is a tradeoff of generality and specificity that allows for a selection of an optimal regular expression to categorize a list of input strings.
+Regular expressions are used to define a set of strings that match a certain pattern. In the following experiment, we posit that the means by which humans judge similarity of words can be represented by a method of inference using regular expressions. In short, there is a tradeoff of generality and specificity that allows for a selection of an optimal regular expression to categorize a list of input strings.
 
 \textbf{Keywords:} 
 Model inference, regular expression.
@@ -50,23 +34,24 @@ Model inference, regular expression.
 
 
 \section{Overview and Motivation}
-% TODO: fill this in
+Understanding the human ability to find structure in data is integral to both cognitive psychology and artificial intelligence. In recent years, a number of studies have shown that human inference across a number of tasks may be Bayesian at some level of analysis. 
+Inspired by Tennenbaum's treatment of the number game, we propose a regular expression game as follows: Given a set $S$ of input strings drawn from a language $L$, what is the likelihood that a new string $s$ is in $L$. Playing such a game requires inferring the rules that govern $L$ from $S$. Noting that humans perform this task  with success on a daily basis in writing regular expressions to process string data, we considered the hypothesis that human inference of regular expressions is at some level Bayesian. 
 
-\section{Inference over Regular Expressions}
+In doing so, we first generated a Bayesian model that, given a set of input strings $S$, generated a regular expression that describes $S$ with the highest posterior probability. This model is discussed in the first part of this paper. We then ran a behavioral experiment in which subjects were asked whether or not a given string $s$ fits with a set of strings $S$. We compare the result of that experiment with results generated given an extension of our model.  
 
-\subsection{Balancing Generality with Specificity}
-The goal of inference is to select a regular expression with the highest posterior probability. The posterior probability is proportional to the product of the hypothesis' prior probability and its likelihood.
+\section{Description of the Model}
+
+%\subsection{Balancing Generality with Specificity}
+Our model has two parts: We generate a set of regular expressions which describe a set of input stings $S$, and we find the regular expression in that set with the highest posterior probability. The posterior probability is proportional to the product of the hypothesis' prior probability and its likelihood.
 \begin{align*}
 	p(h|S) \propto p(h) p(S|h)
 \end{align*}
-Above, $S$ represents the set of input strings. We provide an equation for the prior probability such that our model biases smaller hypotheses, and the likelihood of generating a given hypothesis is inveresly proportional to its expressiveness. So, our model aims to balance generality with specificity.
+Below, we define the prior probability such that our model biases smaller hypotheses, and the likelihood of generating a given hypothesis is inversely proportional to its cost. Our model aims to balance generality with specificity. For example, given "ABC, ABD", we wish to favor the regex $AB(C|D)$ over "?*", which is less likely given the size principle. At the same time, given "ABA", "ABC", "ABD", "ABE", "ABF", we may wish to favor 'AB?' over  '$AB(A|C|D|E|F)$'
 
-\subsection{Hypothesis Representation: DFA}
-Regular expressions are equivalent to deterministic finite automata (DFA).\footnote{See the Appendix for a brief summary of our regex notation.} DFA are often easier to reason with, and are thus used as the dominant representation for regexes throughout this paper.
+\subsection{Representation of Hypotheses}
+Regular expressions are equivalent to deterministic finite automata (DFA).\footnote{See the Appendix for a brief summary of our regex notation.} Because DFA are often easier to reason with, we use them to represent regular expressions in our model (See Fig 1 for an example DFA.)
 
-To extract the likelihood of a hypothesis, probabilities are assigned to transitions. For our purposes, we assumed uniform probability across each potential transition. That is, in the regular exression \verb!a[b|c]!, $p(\verb!ab!)=p(\verb!ac!)=1/2$.
-
-Further, we needed to define the probability with which a DFA would stop generating a string. For instance, given the regular expression \verb!a*!, we would need to define the probability of generating strings \verb!a!, \verb!aa!, \verb!aaa!, etc.
+Further, we define the probability with which a DFA would stop generating a string at a start state . For instance, given the regular expression \verb!a*!, we would need to define the probability of generating strings \verb!a!, \verb!aa!, \verb!aaa!, etc.
 
 In this sense, our DFA is similar to a probabilistic automaton, although the acceptance criteria is $\tau=0$, so the languages represented by our DFA are still regular. [Citation]. A second difference is that there is no concept of stopping string generation in probabilistic automaton.
 
@@ -108,14 +93,14 @@ If merging is continued, the DFA will eventually have only one state with all tr
 
 \subsubsection{Enforcing Determinism} Merging states and replacing transitions with wildcards can allow one state to have non-unique outbound transitions. However, this turns our representation into a nondeterministic finite automaton (NFA) instead of a DFA. Both are equivalent, but the latter afford easier manipulation for our experiment. Thus, to convert the NFA back to a DFA, we use the subset construction, the effect of which is illustrated in both Figure~\ref{merge-figure} and Figure~\ref{wildcard-figure}.
 
-\subsection{Searching the Hypothesis Space} The number of hypotheses grows quickly with the number of states in the base hypothesis. As a lower bound, the number of hypotheses is at least as large as the number of possible starting nodes. Because the starting node could be merged with any subset of the remaining $n-1$ nodes in the DFA, there are $2^{n-1}=O(2^n)$ possible start states. Thus, the hypothesis space is at least exponential in the number of starting nodes in the regular expression.
+\subsection{Searching the Hypothesis Space} The number of hypotheses grows quickly with the number of states in the base hypothesis. As a lower bound, the number of hypotheses is at least as large as the number of possible starting nodes. Because the starting node could be merged with any subset of the remaining $n-1$ nodes in the DFA, there are $2^{n-1}=\Omega(2^n)$ possible start states. Thus, the hypothesis space is at least exponential in the number of starting nodes in the regular expression.
 
 Similarly, the number of possible regex variants created by simply replacing transitions with wildcards is given by $2^m$ where $m$ is the number of transitions. Thus, simply modifying expressions to include wildcards is also exponential.
 
 An upper bound for the complexity of model merging is much more extreme. Performing subset construction for an NFA with $n$ states can produce, in the worst case, a DFA with $2^n$ states. Assuming that any subset of these states also produces a valid DFA, we can have at most $2^{2^n-1}$ DFA.
 % \footnote{See the Appendix for detailed sizing of the hypothesis space.} Actually, this seems inaccurate.
 
-We resolve this issue by performing beam search, which is essentially depth first search that explores only the most promising hypothses. In our case, the most promising hypotheses were defined as those with the highest posterior probability. 
+We resolve this issue by performing beam search. In beam first, we perform breadth first search, but for any given depth of the search tree, we only consider children of the $m$ most promising hypotheses. In our case, the most promising hypotheses were defined as those with the highest posterior probability. 
 
 \section{Inference with DFA}
 The posterior probability for a DFA as a hypothesis is given by the following.
@@ -192,18 +177,28 @@ Our equation for $p(\text{stop})$ is thus:
 \end{align*}
 
 \section{Experiment Design and Model Fitting}
-\subsection{Parameter Fitting}
-The only parameters that needed fitting were $\alpha$ and $\beta$ of the prior probability. A subset of the experimental questions were used to fit the parameter values, and the rest were tested using these fitted paramters.
+Having generated the above Bayesian model for selection of the regular expression with the highest posterior probability, we then conducted a behavioral experiment.  41 subjects (Median age 34, std-dev 13.3) were surveyed on Amazon Mechanical Turk. Two groups (one of twenty, one of 21) were presented with 10 yes or no questions in which they were asked to determine whether a given string `fit' with a list of strings. A sample question was as follows: \\
+\begin{center}Given the list:
 
+\textbf{yyyt \\
+yt \\
+yyyt \\
+yyyt \\ 
+yt}
+
+Does \textbf{yyt} fit?
+\end{center}
+
+The experimental data served two purposes. Using the responses to four out of 23 questions, we set the parameters for alpha and beta. We then used the remaining questions to test our model's performance in a regex game as shown below. 
+
+\subsection{Parameter Fitting}
 Because the role of $\beta$ had the effect of biasing models with fewer transitions, it also had a tendency to bias regular expressions with fewer states. For instance, the $\beta$ term would prefer the regular expression \verb!a*! over \verb!aaaa!. Thus, this term was fitted before fitting the $\alpha$ term.
 
-To fit the $\beta$ term, we observed experiments that would indicate the transition point between a preference for generality over specificity for wildcard-based experiments (e.g. the first two experiments outlined in Table~\ref{parameter-table}). Utilizing the fact that increasing the number of repeated samples decreases the likelihood of a wildcard, and decreasing the length of the sample strings would increases the likelihood of a wildcard, the first two experiments suggest a decision point. That is, if the DFA model is a valid representation of the subjects' responses, then the $\beta$ term should be between $3$ and $5$. For further experimentation, we fixed it at $4$.
+To fit the $\beta$ term, we observed experiments that would indicate the transition point between a preference for generality over specificity for wildcard-based experiments (e.g. the first two experiments outlined in Table~\ref{parameter-table}). Utilizing the fact that increasing the ratio of repeated strings to new strings decreases the likelihood of a wildcard, and decreasing the length of the sample strings would increases the likelihood of a wildcard, the first two experiments suggest a decision point. That is, if the DFA model is a valid representation of the subjects' responses, then the $\beta$ term should be between $3$ and $5$. For further experimentation, we fixed it at $4$.
 
-Fitting the $\alpha$ term was less clear. In particular, the desired behavior was easily abserved with $\alpha=0,\beta=4$. However, a term of $\alpha=1$ was used to bias hypotheses with fewer states given the same number of transitions.
+Fitting the $\alpha$ term was less clear. In particular, the desired behavior was easily observed with $\alpha=0,\beta=4$. However, a term of $\alpha=1$ was used to bias hypotheses with fewer states given the same number of transitions.
 
 % TODO: move this?
-For future work, more experiments could be used to fit the model paramters.
-
 \begin{table}[!ht]
 \begin{center} 
 \caption{Parameter fitting experiments} 
@@ -229,11 +224,46 @@ ao, aoo, aooo & aoooo & 80\% & $\alpha = 0, \beta=4$
 \end{center} 
 \end{table}
 
-\section{Results and Discussion}
-Mention:
+\subsection{The Regex Game}
+Given the fitted model, we then considered the following task: 
 
-- all-or-none behavior of the algorithm, which is likely encouraged by the fact that there didn't seem to be huge diversity in the final hypothesis set. That is, many of the most likely DFA were similarly structured
+Given a language $\mathcal{L}$, a set of regular expressions $\mathcal{H}$ (where these are candidates for $\mathcal{L}$), a set of strings drawn $S$ from $\mathcal{L}$, and a string $s$, we define
+
+\begin{align*}
+	p(s \in \mathcal{L} | S \subseteq {L}) = \sum_{h \in \mathcal{H}} 1 (s \in h) p(h|S)
+\end{align*}
+
+For human participants, because the hypothesis is unobserved, we take $p(s \in \mathcal{L} | S \subseteq {L}) $ to be the average acceptance of a test string given a set $S$. 
+
+In our model, we consider $\mathcal{H}$ to be the set of all hypotheses generated in our model.
+
+\section{Results and Discussion}
+Figure 3 shows the comparison between our model and the human subject data.
+
+\begin{figure}[ht]
+\begin{center}
+\begin{align*}
+\includegraphics[scale=0.6]{results.png}
+\end{align*}
+\end{center}
+\caption{Chart showing  $p(s \in \mathcal{L} | S \subseteq {L}) $. Human subject data is in red, model data is in blue. $R$ = .75} 
+\label{merge-figure}
+\end{figure} 
+
+We note that subjects completed the 10 or 11 question survey on average in around three minutes. It remains unclear if more standardized results would have emerged in certain cases if subjects had taken more time with the task. In addition, more fine grained results may have been obtained if we had instead allowed users to bet certain amounts on whether or not a test string was in $S$. 
+
+
+We note that in cases 1 (S = \{'yyyt', 'yt', 'yyyt', 'yyyt', 'yt'\}, s= 'yyyyyt' ), 4( S = \{jojojojo', 'jojojojo', 'jojojojo'\}, s = jojo), and 6 (s =  tw,  S = \{'twtwtw', 'twtwtw', 'twtwtw'\}), it is clear that the model weighs a smaller number of transitions greater than human subjects do. However, because this same parameter in part controls for wildcards, lowering it reduces performance on many other cases. This suggests that our model's parameter $\beta$ may in fact be better represented by more than one variable in human decision making. 
+
+We also observe that in such cases, there was a relatively small set of probable hypotheses, and that any favoring of smaller hypotheses was magnified by this fact. 
 \section{Conclusion and Future Work}
+
+Despite the number of ways in which our model might be improved mentioned above,  it remains highly implausible that the brain generates its set of candidate hypotheses by ever considering even $2^n$ hypotheses in the first level of beam search we perform, much less far more than that. Doing so would be highly inefficient: the number of implausible hypotheses generated would in most cases be far greater than the number of `good' hypotheses. Far more plausible a priori is the hypothesis that the brain uses of number of heuristics to generate a certain set of candidate hypothesis, and then uses some process analogous to Bayesian inference to select among those hypotheses. To shed light on how this hypothesis selection process may occur, we designed an experiment in which candidates chose among a number of possible rules to explain a set of strings S, but have yet to gather enough data to reach any significant conclusions. 
+
+Further experiments could be conducted to determine what heuristics may be at work in the hypothesis generation process. For any set of candidate heuristics, it will remain to be determined whether or not such heuristics are at some point learned. Clearly some are when semantic considerations are at work: cat and mat but not qat are meaningful english words; 'ao' and 'eo' and 'io' begin with vowels unlike 'xo'. This experiment was designed to avoid such candidate hypotheses. 
+
+
+
 
 % \section{General Formatting Instructions}
 

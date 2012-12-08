@@ -4,8 +4,8 @@ import pydot
 from state import State, keysOverlap, keyMinus, keyUnion, keyIntersect
 
 DEBUG = False
-ALPHA = 1
-BETA = 4
+ALPHA =0
+BETA = 1
 PERMUTE_PROB = 0.7
 
 USE_SUBSET_CONSTRUCTION = True

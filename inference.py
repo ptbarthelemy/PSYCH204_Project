@@ -231,12 +231,11 @@ if __name__ == '__main__':
 
 	# 80% chance of accepting aoooo
 	# if alpha is zero, beta must be greater than 1.5
-	strings = ['ao', 'aoo', 'aooo']
-
+	#strings = ['jojojojo', 'jojojojo', 'jojojojo']	
 	###########################################################################
 	# test, beam search
 	# strings = ['abc', 'adc', 'adce'] # test for abce
-	# strings = ['zze', 'zzq', 'zze'] # test for 'zzo'
+	strings = ['ab', 'abb'] # test for 'zzo'
 	# strings = ['htuu', 'ntuu', 'htuu', 'xtuu', 'ztuu', 'xtuu', 'ztuu'] # test for jtuu
 	# strings = ['yyyt', 'yt', 'yyyt', 'yyyt', 'yt'] # test for 'yyt'
 	# strings = ['lp', 'lllp', 'llp', 'llllp', 'llp', 'lllp'] # test for 'lllllp'
@@ -251,7 +250,7 @@ if __name__ == '__main__':
 	inf.hSpace_[3][0].printGraph("output/inference/trial-end-best-4.png")
 	inf.hSpace_[4][0].printGraph("output/inference/trial-end-best-5.png")
 
-	print "accept %0.3f%%" % (inf.testString("aooo") * 100)
+	print "accept %0.3f%%" % (inf.testString("abbb") * 100)
 
 
 	###########################################################################
