@@ -57,7 +57,7 @@ As our alphabet, we use the set of all lowercase letters. This set, we feel, has
 % TODO: explain character scope'
 
 \subsection{Generating Hypotheses}
-The hypothesis space is initiated with the base hypothesis, the term applied to a DFA that accepts strictly the input strings. We begin generating a series of consecutive states, where the transition between the first state and the second state is governed by the first letter of the first string, the transition between the second and the third is governend by the the second letter, and so on. For each additional string, if the first i characters overlap with those of any of the first i characters of one previous string but differ in the $i+1$th, we add no new states to the DFA until the transition between the i-1th state and the ith state. We then generate new states for the remaining characters of the string. See Figure~\ref{base_hypothesis} for an example of the first hypothesis generated from a set $S = $\{`ababb', `abbab'\} .
+The hypothesis space is initiated with the base hypothesis, the term applied to a DFA that accepts strictly the input strings. We begin generating a series of consecutive states, where the transition between the first state and the second state is governed by the first letter of the first string, the transition between the second and the third is governend by the the second letter, and so on. For each additional string, if the first i characters overlap with those of any of the first i characters of one previous string but differ in the $i+1$th, we add no new states to the DFA until the transition between the i-1th state and the ith state. We then generate new states for the remaining characters of the string. See Figure~\ref{base_hypothesis} for an example of the first hypothesis generated from a set $S = $\{`ababb', `abbab'\}.
   \begin{figure}[ht]
 \begin{center}
 \includegraphics[scale=0.4]{base_hypothesis.png}
@@ -131,28 +131,28 @@ To define the likelihood of producing certain strings, we turn a DFA into a gene
 	p(S) = \prod_{s \in S} p(s)
 \end{align*}
 
-Let the string $s$ be the concatenation of characters $\{a_0,a_1,...,a_{n-1}\}$. We define the probability of generating a string as the product of the probability of generating the letters in sequence $p(a_0a_1...a_{n-1})$ and the product of stopping the string generation on an accept state $p(\text{stop})$.
+Let the string $s$ be the concatenation of characters $\{a_0,a_1,...,a_{n-1}\}$. We define the probability of generating a string as the product of the probability of generating the letters in sequence $p(a_0,a_1,...,a_{n-1})$ and the product of stopping the string generation on an accept state $p(\text{stop})$.
 \begin{align*}
-	p(s) = p(a_1a_2...a_n)p(\text{stop})
+	p(s) = p(a_0,a_1,...,a_{n-1})p(\text{stop})
 \end{align*}
 
 We define the probability of generating the characters as the product of the probabilities of making each state transition.
 \begin{align*}
-	p(a_1a_2 ... a_n) = \prod_{i=0}^{n-1}p(\delta(r_i, a_i))
+	p(a_0, a_1, ..., a_{n-1}) = \prod_{i=0}^{n-1}p(\delta(r_i, a_i))
 \end{align*}
 where $r_i$ is the state reached after the first $i$ characters, and $r_0$ is the start state.
 
 To simplify inference, we assume uniform probability over all possible outbound transitions for a given state. Formally, the probability of making a state transition is given by:
 \begin{align*}
-	p(\delta(r_i, a_{i+1})) &= \frac{1}{\sum_{a\in A} 1\{\delta(r_i, a)\in Q\}}
+	p(\delta(r_i, a_i)) &= \frac{1}{\sum_{a\in A} 1\{\delta(r_i, a)\in Q\}}
 \end{align*}
 where $1\{\cdot\}$ is the indicator function, which evaluates to $1$ if the enclosed proposition is true and $0$ otherwise. $\delta(r_i, a)\in Q$ indicates that the state transition leads to another state of the DFA, so the denominator counts the number of characters for which a transition is defined. In the case of the wildcard `A', the transition is defined for all 26 letters, so the denominator is 26.
 
-For the cases in which a string may alternatively be accepted or continue, one must assign a probability for accepting or continuing the string. For instance, consider the DFA in part (c) of Figure~\ref{merge-figure}. The DFA may generate the empty string, `E', or it may generate any arbitrary string with `a' and `b', like `ababbba'. We define the probability of stopping at a given string to be a fixed value $\tau$. This makes shorter strings more likely to be generated.
+For the cases in which a string may alternatively be accepted or continue, one must assign a probability for accepting or continuing the string. For instance, consider the DFA in part (c) of Figure~\ref{merge-figure}. The DFA may generate the empty string, `', or it may generate any arbitrary string with `a' and `b', like `ababbba'. We define the probability of stopping at a given string to be a fixed value $\tau$. This makes shorter strings more likely to be generated.
 
 Instead of leaving $\tau$ as a parameter of the model, we assume a uniform prior over the parameter and marginalize it when calculating the likelihood of a string. So, let $b$ be the number of times the DFA skipped an accept state before accepting. That is, $b$ is given by the equation below, where $F$ is the set of accept states.
 \begin{align*}
-	b = \sum_{i=1}^{n-1} 1 \{ r_i \in F\}
+	b = \sum_{i=0}^{n-1} 1 \{ r_i \in F\}
 \end{align*}
 
 % TODO: Cite this
