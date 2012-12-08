@@ -35,9 +35,9 @@ Model inference, regular expression.
 
 \section{Overview and Motivation}
 Understanding the human ability to find structure in data is integral to both cognitive psychology and artificial intelligence. In recent years, a number of studies have shown that human inference across a number of tasks may be Bayesian at some level of analysis. 
-Inspired by Tennenbaum's treatment of the number game, we propose a regular expression game as follows: Given a set $S$ of input strings drawn from a language $L$, what is the likelihood that a new string $s$ is in $L$. Playing such a game requires inferring the rules that govern $L$ from $S$. Noting that humans perform this task  with success on a daily basis in writing regular expressions to process string data, we considered the hypothesis that human inference of regular expressions is at some level Bayesian. 
+Inspired by the treatment of the number game in \citeA{tenenbaum1999bayesian}, we propose a regular expression game as follows: Given a set $S$ of input strings drawn from a language $L$, what is the likelihood that a new string $s$ is in $L$. Playing such a game requires inferring the rules that govern $L$ from $S$. Noting that humans perform this task  with success on a daily basis in writing regular expressions to process string data, we considered the hypothesis that human inference of regular expressions is at some level Bayesian. 
 
-In doing so, we first generated a Bayesian model that, given a set of input strings $S$, generated a regular expression that describes $S$ with the highest posterior probability. This model is discussed in the first part of this paper. We then ran a behavioral experiment in which subjects were asked whether or not a given string $s$ fits with a set of strings $S$. We compare the result of that experiment with results generated given an extension of our model.  
+In doing so, we first generated a Bayesian model that, given a set of input strings $S$, generated a regular expression that describes $S$ with the highest posterior probability. This model is discussed in the first part of this paper. We then conducted a behavioral experiment in which subjects were asked whether or not a given string $s$ fits with a set of strings $S$. We compare the result of that experiment with results generated given an extension of our model.  
 
 \section{Description of the Model}
 
@@ -46,10 +46,10 @@ Our model has two parts: We generate a set of regular expressions which describe
 \begin{align*}
 	p(h|S) \propto p(h) p(S|h)
 \end{align*}
-Below, we define the prior probability such that our model biases smaller hypotheses, and the likelihood of generating a given hypothesis is inversely proportional to its cost. Our model aims to balance generality with specificity. For example, given "ABC, ABD", we wish to favor the regex $AB(C|D)$ over "?*", which is less likely given the size principle. At the same time, given "ABA", "ABC", "ABD", "ABE", "ABF", we may wish to favor 'AB?' over  '$AB(A|C|D|E|F)$'
+Below, we define the prior probability such that our model biases smaller hypotheses, and the likelihood of generating a given hypothesis is inversely proportional to its cost. Our model aims to balance generality with specificity. For example, given ``ABC, ABD", we wish to favor the regex $AB(C|D)$ over ``?*", which is less likely given the size principle. At the same time, given ``ABA", ``ABC", ``ABD", ``ABE", ``ABF", we may wish to favor `AB?' over  `$AB(A|C|D|E|F)$'
 
 \subsection{Representation of Hypotheses}
-Regular expressions are equivalent to deterministic finite automata (DFA).\footnote{See the Appendix for a brief summary of our regex notation.} Because DFA are often easier to reason with, we use them to represent regular expressions in our model (See Fig 1 for an example DFA.)
+Regular expressions are equivalent to deterministic finite automata (DFA).\footnote{See the Appendix for a brief summary of our regex notation.} Because DFA are often easier to reason with, we use them to represent regular expressions in our model (See Fig ~\ref{readin} for an example DFA.)
 
 Further, we define the probability with which a DFA would stop generating a string at a start state . For instance, given the regular expression \verb!a*!, we would need to define the probability of generating strings \verb!a!, \verb!aa!, \verb!aaa!, etc.
 
@@ -58,7 +58,20 @@ In this sense, our DFA is similar to a probabilistic automaton, although the acc
 % TODO: explain character scope!
 
 \subsection{Generating Hypotheses}
-The hypothesis space is initiated with the base hypothesis, the term applied to a DFA that accepts strictly the input strings. Next, hypotheses are added to the hypothesis space through two processes of generalization: merging and applying wildcards.
+The hypothesis space is initiated with the base hypothesis, the term applied to a DFA that accepts strictly the input strings. We begin generating a series of consecutive states, where the transition between the first state and the second state is governed by the first letter of the first string, the transition between the second and the third is governend by the the second letter, and so on. For each additional string, if the first i characters overlap with those of any of the first i characters of one previous string but differ in the $i+1$th, we add no new states to the DFA until the transition between the i-1th state and the ith state. We then generate new states for the remaining characters of the string. See Figure~\ref{readin} for an exapmle of the first hypothesis generated from a set $S$.
+  \begin{figure}[ht]
+\begin{center}
+\begin{align*}
+\includegraphics[scale=0.4]{readin.png}
+\end{align*}
+\end{center}
+\caption{An example base hypothesis DFA generated from the strings `ababb' and `abbab'. Note that the two strings share the first two states, but that the fifth and tenth are distinct.} 
+\label{readin}
+\end{figure}
+
+Next, hypotheses are added to the hypothesis space through two processes of generalization: merging and applying wildcards.
+ 
+
 
 \subsubsection{Merging} Merging is the process of combining states of a DFA. The newly create state has all incoming and outgoing transitions of its predecessors. Thus, the DFA will continue to accept the same set of strings as the original DFA. However, the DFA will often accept more strings after merging, thus merging states results in a more generalized DFA.
 
@@ -100,7 +113,7 @@ Similarly, the number of possible regex variants created by simply replacing tra
 An upper bound for the complexity of model merging is much more extreme. Performing subset construction for an NFA with $n$ states can produce, in the worst case, a DFA with $2^n$ states. Assuming that any subset of these states also produces a valid DFA, we can have at most $2^{2^n-1}$ DFA.
 % \footnote{See the Appendix for detailed sizing of the hypothesis space.} Actually, this seems inaccurate.
 
-We resolve this issue by performing beam search. In beam first, we perform breadth first search, but for any given depth of the search tree, we only consider children of the $m$ most promising hypotheses. In our case, the most promising hypotheses were defined as those with the highest posterior probability. 
+We resolve this issue by performing beam search. In beam first, we perform breadth first search, but for any given depth of the search tree, we only consider children of the $m$ most promising hypotheses. In our case, the most promising hypotheses were defined as those with the highest posterior probability. (For a more detailed discussion of Beam Search, see \cite{HwangStuhlmullerGoodman2011}
 
 \section{Inference with DFA}
 The posterior probability for a DFA as a hypothesis is given by the following.
@@ -247,20 +260,24 @@ Figure 3 shows the comparison between our model and the human subject data.
 \end{align*}
 \end{center}
 \caption{Chart showing  $p(s \in \mathcal{L} | S \subseteq {L}) $. Human subject data is in red, model data is in blue. $R$ = .75} 
-\label{merge-figure}
+\label{-figure}
 \end{figure} 
 
 We note that subjects completed the 10 or 11 question survey on average in around three minutes. It remains unclear if more standardized results would have emerged in certain cases if subjects had taken more time with the task. In addition, more fine grained results may have been obtained if we had instead allowed users to bet certain amounts on whether or not a test string was in $S$. 
 
 
-We note that in cases 1 (S = \{'yyyt', 'yt', 'yyyt', 'yyyt', 'yt'\}, s= 'yyyyyt' ), 4( S = \{jojojojo', 'jojojojo', 'jojojojo'\}, s = jojo), and 6 (s =  tw,  S = \{'twtwtw', 'twtwtw', 'twtwtw'\}), it is clear that the model weighs a smaller number of transitions greater than human subjects do. However, because this same parameter in part controls for wildcards, lowering it reduces performance on many other cases. This suggests that our model's parameter $\beta$ may in fact be better represented by more than one variable in human decision making. 
+We note that in cases 1 (S = \{'yyyt', `yt', `yyyt', `yyyt', `yt'\}, s= `yyyyyt' ), 4( S = \{jojojojo', `jojojojo', `jojojojo'\}, s = jojo), and 6 (s =  tw,  S = \{'twtwtw', `twtwtw', `twtwtw'\}), it is clear that the model weighs a smaller number of transitions greater than human subjects do. However, because this same parameter in part controls for wildcards, lowering it reduces performance on many other cases. This suggests that our model's parameter $\beta$ may in fact be better represented by more than one variable in human decision making. 
 
 We also observe that in such cases, there was a relatively small set of probable hypotheses, and that any favoring of smaller hypotheses was magnified by this fact. 
 \section{Conclusion and Future Work}
 
 Despite the number of ways in which our model might be improved mentioned above,  it remains highly implausible that the brain generates its set of candidate hypotheses by ever considering even $2^n$ hypotheses in the first level of beam search we perform, much less far more than that. Doing so would be highly inefficient: the number of implausible hypotheses generated would in most cases be far greater than the number of `good' hypotheses. Far more plausible a priori is the hypothesis that the brain uses of number of heuristics to generate a certain set of candidate hypothesis, and then uses some process analogous to Bayesian inference to select among those hypotheses. To shed light on how this hypothesis selection process may occur, we designed an experiment in which candidates chose among a number of possible rules to explain a set of strings S, but have yet to gather enough data to reach any significant conclusions. 
 
-Further experiments could be conducted to determine what heuristics may be at work in the hypothesis generation process. For any set of candidate heuristics, it will remain to be determined whether or not such heuristics are at some point learned. Clearly some are when semantic considerations are at work: cat and mat but not qat are meaningful english words; 'ao' and 'eo' and 'io' begin with vowels unlike 'xo'. This experiment was designed to avoid such candidate hypotheses. 
+Further experiments could be conducted to determine what heuristics may be at work in the hypothesis generation process. For any set of candidate heuristics, it will remain to be determined whether or not such heuristics are at some point learned. Clearly some semantic considerations are at work in human pattern recognition on strings: cat and mat but not qat are meaningful english words; `ao' and `eo' and `io' begin with vowels unlike `xo'. (This experiment was designed to avoid such candidate hypotheses.)
+
+We note that we do not directly solve the problem of finding a most plausible way to align a set of strings $S$. Humans are excellent at quickly noticing the pattern in `aall', `ball', and `call'. Although our model will infer that the last three letters can be represented with only three states in each case, in doing so it generates many candidate regular expressions which a human being would not consciously consider.  
+
+Future work may be directed towards investigating the hypothesis that humans first align candidate strings and then generate a number of hypotheses. For example, humans would be very quick to notice that ``shrew", ``reward", and ``threw" all contain the `rew' subsequence, and would most likely generate candidate regular expressions which preserved that substring. We note, however, that the related task of the multiple sequence alignment problem is NP hard, and that a similar model which considers the most likely alignment of a set of strings given many possible alignments will consider a very large number of hypotheses when strings are long enough.  
 
 
 
@@ -415,12 +432,11 @@ Further experiments could be conducted to determine what heuristics may be at wo
 % \nocite{ShragerLangley1990a}
 
 
-% \bibliographystyle{apacite}
+\bibliographystyle{apacite}
+\setlength{\bibleftmargin}{.125in}
+\setlength{\bibindent}{-\bibleftmargin}
 
-% \setlength{\bibleftmargin}{.125in}
-% \setlength{\bibindent}{-\bibleftmargin}
-
-% \bibliography{CogSci_Template}
+ \bibliography{regbib}
 
 \section{Appendix: Technical Notes}
 \subsection{Regex and DFA Notation}
