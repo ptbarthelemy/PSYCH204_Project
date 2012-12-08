@@ -34,7 +34,7 @@ Model inference, regular language, regular expression, deterministic finite auto
 
 
 \section{Overview and Motivation}
-Understanding the human ability to find structure in data is integral to both cognitive psychology and artificial intelligence. In recent years, a number of studies have shown that human inference across a number of tasks may be Bayesian at some level of analysis. Inspired by the treatment of the number game in \citeA{tenenbaum1999bayesian}, we propose a regular expression game as follows: Given a set $S$ of input strings drawn from a language $L$, what is the likelihood that a new string $s$ is in $L$. Playing such a game requires inferring the rules that govern $L$ from $S$. Noting that humans perform this task  with success on a daily basis in writing regular expressions to process string data, we considered the hypothesis that human inference of regular expressions is at some level Bayesian. 
+Understanding the human ability to find structure in data is integral to both cognitive psychology and artificial intelligence. In recent years, a number of studies have shown that human inference across a number of tasks may be Bayesian at some level of analysis. Inspired by the treatment of the number game in \citeA{tenenbaum1999bayesian}, we propose a regular expression game as follows: Given a set $S$ of input strings drawn from a language $\mathcal{L}$, what is the likelihood that a new string $s$ is in $\mathcal{L}$. Playing such a game requires inferring the rules that govern $\mathcal{L}$ from $S$. Noting that humans perform this task  with success on a daily basis in writing regular expressions to process string data, we considered the hypothesis that human inference of regular expressions is at some level Bayesian. 
 
 In doing so, we first generated a Bayesian model that, given a set of input strings $S$, generated a regular expression that describes $S$ with the highest posterior probability. This model is discussed in the first part of this paper. We then ran a behavioral experiment in which subjects were asked whether or not a given string $s$ fits with a set of strings $S$. We compare the result of that experiment with results generated given an extension of our model.  
 
@@ -52,12 +52,12 @@ Further, we define the probability with which a DFA would stop generating a stri
 
 Our generative version of the DFA is not to be confused with a probabilistic atumaton, which has transition probabilities much as described above and a final acceptance threshold. Our generative automata does not have this threshold, and instead has an added parameter which controls the likelihood of stopping to generate a string.
 
-As our alphabet, we use the set of all lowercase letters. This set, we feel, has an intuitive boundary, as subjects seeing strings of all lowercase letters are unlikely to suppose an arbitrary uppercase letter or special character, and thus we can assume fixed the expressiveness of wildcards.
+As our alphabet, we use the set of all lowercase letters. This set, we feel, has an intuitive boundary, as subjects seeing strings of all lowercase letters are unlikely to suppose an arbitrary uppercase letter or special character, and thus we assume the expressiveness of wildcards to be fixed.
 
 % TODO: explain character scope!
 
 \subsection{Generating Hypotheses}
-The hypothesis space is initiated with the base hypothesis, the term applied to a DFA that accepts strictly the input strings. We begin generating a series of consecutive states, where the transition between the first state and the second state is governed by the first letter of the first string, the transition between the second and the third is governend by the the second letter, and so on. For each additional string, if the first i characters overlap with those of any of the first i characters of one previous string but differ in the $i+1$th, we add no new states to the DFA until the transition between the i-1th state and the ith state. We then generate new states for the remaining characters of the string. See Figure~\ref{readin} for an exapmle of the first hypothesis generated from a set $S$.
+The hypothesis space is initiated with the base hypothesis, the term applied to a DFA that accepts strictly the input strings. We begin generating a series of consecutive states, where the transition between the first state and the second state is governed by the first letter of the first string, the transition between the second and the third is governend by the the second letter, and so on. For each additional string, if the first i characters overlap with those of any of the first i characters of one previous string but differ in the $i+1$th, we add no new states to the DFA until the transition between the i-1th state and the ith state. We then generate new states for the remaining characters of the string. See Figure~\ref{base_hypothesis} for an example of the first hypothesis generated from a set $S = $\{\verb!ababb!, \verb!abbab!\} .
   \begin{figure}[ht]
 \begin{center}
 \begin{align*}
@@ -65,7 +65,7 @@ The hypothesis space is initiated with the base hypothesis, the term applied to 
 \end{align*}
 \end{center}
 \caption{An example base hypothesis DFA generated from the strings `ababb' and `abbab'. Note that the two strings share the first two states, but that the fifth and tenth are distinct.} 
-\label{readin}
+\label{base_hypothesis}
 \end{figure}
 
 Next, hypotheses are added to the hypothesis space through two processes of generalization: merging and applying wildcards.
@@ -189,7 +189,7 @@ Our equation for $p(\text{stop})$ is thus:
 \end{align*}
 
 \section{Experiment Design and Model Fitting}
-Having generated the above Bayesian model for selection of the regular expression with the highest posterior probability, we then conducted a behavioral experiment.  41 subjects (Median age 34, std-dev 13.3) were surveyed on Amazon Mechanical Turk. Two groups (one of twenty, one of 21) were presented with 10 yes or no questions in which they were asked to determine whether a given string `fit' with a list of strings. A sample question was as follows: \\
+Having generated the above Bayesian model for selection of the regular expression with the highest posterior probability, we then conducted a behavioral experiment.  41 subjects (Median age 34, std-dev 13.3) were surveyed on Amazon Mechanical Turk. Two groups (one of 20, one of 21) were presented with 10 yes or no questions in which they were asked to determine whether a given string `fit' with a list of strings. A sample question was as follows: \\
 \begin{center}Given the list:
 
 \textbf{yyyt \\
@@ -242,7 +242,6 @@ Given the fitted model, we then considered the following task:
 Given a language $\mathcal{L}$, a set of regular expressions $\mathcal{H}$ (where these are candidates for $\mathcal{L}$), a set of strings drawn $S$ from $\mathcal{L}$, and a string $s$, we define
 
 \begin{align*}
-
 	p(s \in \mathcal{L} | S \subseteq {\mathcal{L}}) = \sum_{h \in \mathcal{H}} 1 \{s \in h\} p(h|S)
 \end{align*}
 
@@ -256,7 +255,7 @@ Figure~\ref{results-chart} shows the comparison between our model and the human 
 \begin{figure}[ht]
 \begin{center}
 \begin{align*}
-\includegraphics[scale=0.6]{results-1.png}
+\includegraphics[scale=0.6]{results.png}
 \end{align*}
 \end{center}
 \caption{Chart showing  $p(s \in \mathcal{L} | S \subseteq {L}) $. Human subject data is in red, model data is in blue. $R$ = .75} 
@@ -273,13 +272,13 @@ future work idea:
 
 -different wildcards (numbers, etc). this was implemented, but we didn't implement any experiments
 
-Despite the number of ways in which our model might be improved mentioned above,  it remains highly implausible that the brain generates its set of candidate hypotheses by ever considering even $2^n$ hypotheses in the first level of beam search we perform, much less far more than that. Doing so would be highly inefficient: the number of implausible hypotheses generated would in most cases be far greater than the number of `good' hypotheses. Far more plausible a priori is the hypothesis that the brain uses of number of heuristics to generate a certain set of candidate hypothesis, and then uses some process analogous to Bayesian inference to select among those hypotheses. To shed light on how this hypothesis selection process may occur, we designed an experiment in which candidates chose among a number of possible rules to explain a set of strings S, but have yet to gather enough data to reach any significant conclusions. 
+Despite the number of ways in which our model might be improved mentioned above,  it remains highly implausible that the brain generates its set of candidate hypotheses by ever considering even $2^n$ hypotheses in the first level of beam search we perform, much less more than that. Doing so would be highly inefficient: the number of implausible hypotheses generated would in most cases be far greater than the number of `good' hypotheses. Far more plausible a priori is the hypothesis that the brain uses of number of heuristics to generate a certain set of candidate hypothesis, and then uses some process analogous to Bayesian inference to select among those hypotheses. To shed light on how this hypothesis selection process may occur, we designed an experiment in which candidates chose among a number of possible rules to explain a set of strings S, but have yet to gather enough data to reach any significant conclusions. 
 
 Further experiments could be conducted to determine what heuristics may be at work in the hypothesis generation process. For any set of candidate heuristics, it will remain to be determined whether or not such heuristics are at some point learned. Clearly some semantic considerations are at work in human pattern recognition on strings: cat and mat but not qat are meaningful english words; `ao' and `eo' and `io' begin with vowels unlike `xo'. (This experiment was designed to avoid such candidate hypotheses.)
 
 We note that we do not directly solve the problem of finding a most plausible way to align a set of strings $S$. Humans are excellent at quickly noticing the pattern in `aall', `ball', and `call'. Although our model will infer that the last three letters can be represented with only three states in each case, in doing so it generates many candidate regular expressions which a human being would not consciously consider.  
 
-Future work may be directed towards investigating the hypothesis that humans first align candidate strings and then generate a number of hypotheses. For example, humans would be very quick to notice that ``shrew", ``reward", and ``threw" all contain the `rew' subsequence, and would most likely generate candidate regular expressions which preserved that substring. We note, however, that the related task of the multiple sequence alignment problem is NP hard, and that a similar model which considers the most likely alignment of a set of strings given many possible alignments will consider a very large number of hypotheses when strings are long enough.  
+Future work may be directed towards investigating the hypothesis that humans first align candidate strings and then generate a number of hypotheses. For example, humans would be very quick to notice that ``shrew", ``reward", and ``threw" all contain the `rew' subsequence, and would most likely generate candidate regular expressions which preserved that substring. However, following \citeA{Fernau:2009:ALR:1512988.1513048} we note that the related task of the multiple sequence alignment problem is NP hard, and that a similar model which considers the most likely alignment of a set of strings given many possible alignments will consider a very large number of hypotheses when strings are long enough.  
 
 
 
@@ -425,20 +424,11 @@ Future work may be directed towards investigating the hypothesis that humans fir
 % journal article, technical report, dissertation, book, and edited
 % volume, respectively.
 
-% \nocite{ChalnickBillman1988a}
-% \nocite{Feigenbaum1963a}
-% \nocite{Hill1983a}
-% \nocite{OhlssonLangley1985a}
-% \nocite{Lewis1978a}
-% \nocite{NewellSimon1972a}
-% \nocite{ShragerLangley1990a}
-
 
 \bibliographystyle{apacite}
 \setlength{\bibleftmargin}{.125in}
 \setlength{\bibindent}{-\bibleftmargin}
-
- \bibliography{regbib}
+ \bibliography{regexbib}
 
 \section{Appendix: Technical Notes}
 \subsection{Regex and DFA Notation}
