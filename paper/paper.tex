@@ -29,31 +29,30 @@
 Regular expressions are used to define a set of strings that match a certain pattern. In the following experiment, we posit that the means by which humans judge similarity of words can be represented by a method of inference using regular expressions. In short, there is a tradeoff of generality and specificity that allows for a selection of an optimal regular expression to categorize a list of input strings.
 
 \textbf{Keywords:} 
-Model inference, regular expression.
+Model inference, regular language, regular expression, deterministic finite automaton.
 \end{abstract}
 
 
 \section{Overview and Motivation}
-Understanding the human ability to find structure in data is integral to both cognitive psychology and artificial intelligence. In recent years, a number of studies have shown that human inference across a number of tasks may be Bayesian at some level of analysis. 
-Inspired by the treatment of the number game in \citeA{tenenbaum1999bayesian}, we propose a regular expression game as follows: Given a set $S$ of input strings drawn from a language $L$, what is the likelihood that a new string $s$ is in $L$. Playing such a game requires inferring the rules that govern $L$ from $S$. Noting that humans perform this task  with success on a daily basis in writing regular expressions to process string data, we considered the hypothesis that human inference of regular expressions is at some level Bayesian. 
+Understanding the human ability to find structure in data is integral to both cognitive psychology and artificial intelligence. In recent years, a number of studies have shown that human inference across a number of tasks may be Bayesian at some level of analysis. Inspired by the treatment of the number game in \citeA{tenenbaum1999bayesian}, we propose a regular expression game as follows: Given a set $S$ of input strings drawn from a language $L$, what is the likelihood that a new string $s$ is in $L$. Playing such a game requires inferring the rules that govern $L$ from $S$. Noting that humans perform this task  with success on a daily basis in writing regular expressions to process string data, we considered the hypothesis that human inference of regular expressions is at some level Bayesian. 
 
-In doing so, we first generated a Bayesian model that, given a set of input strings $S$, generated a regular expression that describes $S$ with the highest posterior probability. This model is discussed in the first part of this paper. We then conducted a behavioral experiment in which subjects were asked whether or not a given string $s$ fits with a set of strings $S$. We compare the result of that experiment with results generated given an extension of our model.  
+In doing so, we first generated a Bayesian model that, given a set of input strings $S$, generated a regular expression that describes $S$ with the highest posterior probability. This model is discussed in the first part of this paper. We then ran a behavioral experiment in which subjects were asked whether or not a given string $s$ fits with a set of strings $S$. We compare the result of that experiment with results generated given an extension of our model.  
 
 \section{Description of the Model}
 
-%\subsection{Balancing Generality with Specificity}
 Our model has two parts: We generate a set of regular expressions which describe a set of input stings $S$, and we find the regular expression in that set with the highest posterior probability. The posterior probability is proportional to the product of the hypothesis' prior probability and its likelihood.
-\begin{align*}
-	p(h|S) \propto p(h) p(S|h)
-\end{align*}
-Below, we define the prior probability such that our model biases smaller hypotheses, and the likelihood of generating a given hypothesis is inversely proportional to its cost. Our model aims to balance generality with specificity. For example, given ``ABC, ABD", we wish to favor the regex $AB(C|D)$ over ``?*", which is less likely given the size principle. At the same time, given ``ABA", ``ABC", ``ABD", ``ABE", ``ABF", we may wish to favor `AB?' over  `$AB(A|C|D|E|F)$'
+
+Below, we define the prior probability such that our model biases smaller hypotheses, and the likelihood of generating a given hypothesis is inversely proportional to its cost. Our model aims to balance generality with specificity. For example, given \verb!abc, abd!, we wish to favor the regex \verb!ab(c|d)! over \verb!A*! where \verb!A! represents any letter,\footnote{See the Appendix for a brief summary of our regex notation.} which is less likely given the size principle. At the same time, given \verb!aba!, \verb!abc!, \verb!abd!, \verb!abe!, \verb!abf!, we may wish to favor \verb!abA! over \verb!ab(a|c|d|e|f)!.
 
 \subsection{Representation of Hypotheses}
-Regular expressions are equivalent to deterministic finite automata (DFA).\footnote{See the Appendix for a brief summary of our regex notation.} Because DFA are often easier to reason with, we use them to represent regular expressions in our model (See Fig ~\ref{readin} for an example DFA.)
+
+Regular expressions are equivalent to deterministic finite automata (DFA). Because DFA are often easier to reason with, we use them to represent regular expressions in our model (See Figure~\ref{base_hypothesis} for an example DFA.)
 
 Further, we define the probability with which a DFA would stop generating a string at a start state . For instance, given the regular expression \verb!a*!, we would need to define the probability of generating strings \verb!a!, \verb!aa!, \verb!aaa!, etc.
 
-In this sense, our DFA is similar to a probabilistic automaton, although the acceptance criteria is $\tau=0$, so the languages represented by our DFA are still regular. [Citation]. A second difference is that there is no concept of stopping string generation in probabilistic automaton.
+Our generative version of the DFA is not to be confused with a probabilistic atumaton, which has transition probabilities much as described above and a final acceptance threshold. Our generative automata does not have this threshold, and instead has an added parameter which controls the likelihood of stopping to generate a string.
+
+As our alphabet, we use the set of all lowercase letters. This set, we feel, has an intuitive boundary, as subjects seeing strings of all lowercase letters are unlikely to suppose an arbitrary uppercase letter or special character, and thus we can assume fixed the expressiveness of wildcards.
 
 % TODO: explain character scope!
 
@@ -71,7 +70,6 @@ The hypothesis space is initiated with the base hypothesis, the term applied to 
 
 Next, hypotheses are added to the hypothesis space through two processes of generalization: merging and applying wildcards.
  
-
 
 \subsubsection{Merging} Merging is the process of combining states of a DFA. The newly create state has all incoming and outgoing transitions of its predecessors. Thus, the DFA will continue to accept the same set of strings as the original DFA. However, the DFA will often accept more strings after merging, thus merging states results in a more generalized DFA.
 
@@ -115,6 +113,7 @@ An upper bound for the complexity of model merging is much more extreme. Perform
 
 We resolve this issue by performing beam search. In beam first, we perform breadth first search, but for any given depth of the search tree, we only consider children of the $m$ most promising hypotheses. In our case, the most promising hypotheses were defined as those with the highest posterior probability. (For a more detailed discussion of Beam Search, see \cite{HwangStuhlmullerGoodman2011}
 
+
 \section{Inference with DFA}
 The posterior probability for a DFA as a hypothesis is given by the following.
 \begin{align*}
@@ -123,34 +122,34 @@ The posterior probability for a DFA as a hypothesis is given by the following.
 Thus, inferring the best DFA given a set of input strings was essentially a problem in balancing simplicity with conservation of belief. That is, DFA were biased a priori for being simpler, but simpler DFA tended to accept more strings.
 
 \subsection{Prior Probability}
-We assigned the prior probability to the hypotheses (i.e. regexes) based on the size of the DFA and the number of transitions. In the following equation, $|S|$ is the number of states in the DFA and $|T|$ is the number of tranisitons in the DFA, where a wildcard counts as only one transition. 
+We assigned the prior probability to the hypotheses (i.e. regexes) based on the size of the DFA and the number of transitions. In the following equation, $|S|$ is the number of states in the DFA and $|\delta|$ is the number of tranisitons in the DFA, where a wildcard counts as only one transition. 
 \begin{align*}
-	P(h) \propto e^{-\alpha|S| - \beta|T|}
+	P(h) \propto e^{-\alpha|S| - \beta|\delta|}
 \end{align*}
 Thus, we have biased smaller DFA that use wildcards instead of literal characters. [cite Program Merging model]
 
 \subsection{Likelihood}
-To define the likelihood of producing certain strings, we turn a DFA into a generative automaton that has a probability of generating a given string. Letting the input strings be independent, the probability of generating strings $S$ is equal to the product of the probabilities of generating each string.
+To define the likelihood of producing certain strings, we turn a DFA into a generative automaton with a probability distribution over generated strings. Letting the input strings be independent, the probability of generating the set of strings $S$ is equal to the product of the probabilities of generating each string.
 \begin{align*}
 	p(S) = \prod_{s \in S} p(s)
 \end{align*}
 
-Let the $s$ be the concatenation of characters $a_1a_2...a_n$. We define the probability of generating a string as the product of the probability of generating the letters in sequence $p(a_1a_2...a_n)$ and the product of stopping the string generation on an accept state $p(\text{stop})$.
+Let the string $s$ be the concatenation of characters $\{a_0,a_1,...,a_{n-1}\}$. We define the probability of generating a string as the product of the probability of generating the letters in sequence $p(a_0a_1...a_{n-1})$ and the product of stopping the string generation on an accept state $p(\text{stop})$.
 \begin{align*}
 	p(s) = p(a_1a_2...a_n)p(\text{stop})
 \end{align*}
 
-We define the probability of generating the characters as the product of the probabilities of making each state transition over each state.
+We define the probability of generating the characters as the product of the probabilities of making each state transition.
 \begin{align*}
-	p(a_1a_2 ... a_n) = \prod_{i=1}^{n}p(\delta(r_i, a_{i+1}))
+	p(a_1a_2 ... a_n) = \prod_{i=0}^{n-1}p(\delta(r_i, a_i))
 \end{align*}
-where $r_i$ is the state reached after the first $i-1$ characters, and $r_1$ is the start state.
+where $r_i$ is the state reached after the first $i$ characters, and $r_0$ is the start state.
 
-To simplify inference, we assume uniform probability over all possible state transitions. Formally, the probability of making a state transition is given by:
+To simplify inference, we assume uniform probability over all possible outbound transitions for a given state. Formally, the probability of making a state transition is given by:
 \begin{align*}
-	p(\delta(r_i, a_{i+1})) &= \frac{1}{\sum_{a\in A} 1\{\delta(r_i, a)\}}
+	p(\delta(r_i, a_{i+1})) &= \frac{1}{\sum_{a\in A} 1\{\delta(r_i, a)\in Q\}}
 \end{align*}
-Notice that the denominator counts the number of characters for which a transition is defined. In the case of a wildcard, the transition is defined for all 26 letters.
+where $1\{\cdot\}$ is the indicator function, which evaluates to $1$ if the enclosed proposition is true and $0$ otherwise. $\delta(r_i, a)\in Q$ indicates that the state transition leads to another state of the DFA, so the denominator counts the number of characters for which a transition is defined. In the case of the wildcard \verb!A!, the transition is defined for all 26 letters, so the denominator is 26.
 
 For the cases in which a string may alternatively be accepted or continue, one must assign a probability for accepting or continuing the string. For instance, consider the DFA in part (c) of Figure~\ref{merge-figure}. The DFA may generate the empty string, \verb!E!, or it may generate any arbitrary string with \verb!a! and \verb!b!, like \verb!ababbba!. We define the probability of stopping at a given string to be a fixed value $\tau$. This makes shorter strings more likely to be generated.
 
@@ -161,12 +160,12 @@ Instead of leaving $\tau$ as a parameter of the model, we assume a uniform prior
 
 % TODO: Cite this
 
-The probability of stopping at an accept state is given by the equation below. The condition $\exists a : \delta(r_n, a)$ indicates that there is an outbound transition for the accept state of the string.
+The probability of stopping at an accept state is given by the equation below. The condition $r_n \in F \wedge \exists a : \delta(r_n, a)\in Q$ states that the last state reached by the string is an accept state, and that that state has at least one outbound transition.
 \begin{align*}
 	p(\text{stop}) &= \left\{
 		\begin{array}{rl}
-		\tau (1-\tau)^b & r_n \in F \wedge \exists a : \delta(r_n, a)
-		\\ (1-\tau)^b & r_n \in F \wedge \not \exists a : \delta(r_n, a)
+		\tau (1-\tau)^b & r_n \in F \wedge \exists a : \delta(r_n, a)\in Q
+		\\ (1-\tau)^b & r_n \in F \wedge \not \exists a : \delta(r_n, a)\in Q
 		\\ 0 & \text{otherwise}
 		\end{array}
 		\right.
@@ -182,8 +181,8 @@ Our equation for $p(\text{stop})$ is thus:
 \begin{align*}
 	p(\text{stop}) &= \left\{
 		\begin{array}{rl}
-		\frac{1}{b^2+3b+1} & \in F \wedge \exists a : \delta(r_n, a)
-		\\ \frac{1}{b+1} & \in F \wedge \not \exists a : \delta(r_n, a)
+		\frac{1}{b^2+3b+1} & r_n \in F \wedge \exists a : \delta(r_n, a)
+		\\ \frac{1}{b+1} & r_n \in F \wedge \not \exists a : \delta(r_n, a)
 		\\ 0 & \text{otherwise}
 		\end{array}
 		\right.
@@ -243,33 +242,36 @@ Given the fitted model, we then considered the following task:
 Given a language $\mathcal{L}$, a set of regular expressions $\mathcal{H}$ (where these are candidates for $\mathcal{L}$), a set of strings drawn $S$ from $\mathcal{L}$, and a string $s$, we define
 
 \begin{align*}
-	p(s \in \mathcal{L} | S \subseteq {L}) = \sum_{h \in \mathcal{H}} 1 (s \in h) p(h|S)
+
+	p(s \in \mathcal{L} | S \subseteq {\mathcal{L}}) = \sum_{h \in \mathcal{H}} 1 \{s \in h\} p(h|S)
 \end{align*}
 
-For human participants, because the hypothesis is unobserved, we take $p(s \in \mathcal{L} | S \subseteq {L}) $ to be the average acceptance of a test string given a set $S$. 
+For human participants, because the hypothesis is unobserved, we take $p(s \in \mathcal{L} | S \subseteq {\mathcal{L}}) $ to be the average acceptance of a test string given a set $S$. 
 
-In our model, we consider $\mathcal{H}$ to be the set of all hypotheses generated in our model.
+We define $\mathcal{H}$ to be the set of all hypotheses generated in our model. Note, however, that this is the set of regular languages which were identified in beam search, so it does not represent the set of all possible hypotheses.
 
 \section{Results and Discussion}
-Figure 3 shows the comparison between our model and the human subject data.
+Figure~\ref{results-chart} shows the comparison between our model and the human subject data.
 
 \begin{figure}[ht]
 \begin{center}
 \begin{align*}
-\includegraphics[scale=0.6]{results.png}
+\includegraphics[scale=0.6]{results-1.png}
 \end{align*}
 \end{center}
 \caption{Chart showing  $p(s \in \mathcal{L} | S \subseteq {L}) $. Human subject data is in red, model data is in blue. $R$ = .75} 
-\label{-figure}
+\label{results-chart}
 \end{figure} 
 
 We note that subjects completed the 10 or 11 question survey on average in around three minutes. It remains unclear if more standardized results would have emerged in certain cases if subjects had taken more time with the task. In addition, more fine grained results may have been obtained if we had instead allowed users to bet certain amounts on whether or not a test string was in $S$. 
 
-
-We note that in cases 1 (S = \{'yyyt', `yt', `yyyt', `yyyt', `yt'\}, s= `yyyyyt' ), 4( S = \{jojojojo', `jojojojo', `jojojojo'\}, s = jojo), and 6 (s =  tw,  S = \{'twtwtw', `twtwtw', `twtwtw'\}), it is clear that the model weighs a smaller number of transitions greater than human subjects do. However, because this same parameter in part controls for wildcards, lowering it reduces performance on many other cases. This suggests that our model's parameter $\beta$ may in fact be better represented by more than one variable in human decision making. 
+We note that in cases 1 (S = \{\verb!yyyt!, \verb!yt!, \verb!yyyt!, \verb!yyyt!, \verb!yt!\}, s= \verb!yyyyyt!), 4 (S = \{\verb!jojojojo!, \verb!jojojojo!, \verb!jojojojo!\}, s = \verb!jojo!), and 6 (S = \{\verb!twtwtw!, \verb!twtwtw!, \verb!twtwtw!\}, s =  \verb!tw!), it is clear that the model weighs a smaller number of transitions greater than human subjects do. However, because this same parameter in part controls for wildcards, lowering it reduces performance on many other cases. This suggests that our model's parameter $\beta$ may in fact be better represented by more than one variable in human decision making. 
 
 We also observe that in such cases, there was a relatively small set of probable hypotheses, and that any favoring of smaller hypotheses was magnified by this fact. 
 \section{Conclusion and Future Work}
+future work idea:
+
+-different wildcards (numbers, etc). this was implemented, but we didn't implement any experiments
 
 Despite the number of ways in which our model might be improved mentioned above,  it remains highly implausible that the brain generates its set of candidate hypotheses by ever considering even $2^n$ hypotheses in the first level of beam search we perform, much less far more than that. Doing so would be highly inefficient: the number of implausible hypotheses generated would in most cases be far greater than the number of `good' hypotheses. Far more plausible a priori is the hypothesis that the brain uses of number of heuristics to generate a certain set of candidate hypothesis, and then uses some process analogous to Bayesian inference to select among those hypotheses. To shed light on how this hypothesis selection process may occur, we designed an experiment in which candidates chose among a number of possible rules to explain a set of strings S, but have yet to gather enough data to reach any significant conclusions. 
 
@@ -444,29 +446,29 @@ We used a limited alphabet wherein normal characters are all lower case. We also
 \begin{enumerate}
 	\item Acceptance of specific strings is represented as concatenated characters. E.g. \verb!abc! accepts only \verb!abc!.
 	\item Acceptance of disjunctive strings is represnted by \verb![a|b]!. E.g. \verb![abc|c]!accepts only \verb!abc! and \verb!c!.
-	\item Acceptance of any character is represented by the wildcard \verb!?!. E.g. \verb!a?! accepts \verb!aa!, \verb!ab!, \verb!ac!, etc.
+	\item Acceptance of any character is represented by the wildcard \verb!A!. E.g. \verb!aA! accepts \verb!aa!, \verb!ab!, \verb!ac!, etc.
 	\item Acceptance of the empty string is represented by \verb!E!. \verb!Ea! is the same as \verb!a!.
 	\item Acceptance of any sequence repeated zero or more times is represented by the Kleene star, \verb!a*!. E.g. \verb!a*! accepts \verb!E!, \verb!a!, \verb!aa!, etc, 
 \end{enumerate}
 
-% \subsection{Sizing the Hypothesis Space}
-% Ignoring wildcards and assuming that no chain-reaction merges occur, each hypothesis can be defined as a set of mutually exclusive subsets of the states contained in the base hypothesis. For instance, given states $s_1, s_2, s_3$, the possible hypotheses are:
-% 	\begin{align*}
-% 		&s_1, s_2, s_3
-% 		\\&\text{merge}(s_1, s_2), s_3
-% 		\\&\text{merge}(s_1, s_3), s_2
-% 		\\&\text{merge}(s_2, s_3), s_1
-% 		\\&\text{merge}(s_1, s_2, s_3)
-% 	\end{align*}
-% To generalize this to a case of $n_b$ states in the base hypothesis, one can consider individually the number of regexes with $n_f$ states in the finished regex. For the cases where $n_b=n_f$ or $n_f=1$, it is easy to verify that there exist only one regex. When creating hypotheses where $1 < n_f < n_b$, however, one can simply look to the case of $n_b - 1$. In particular, for every $n_f$, one can simply duplicate all of the hypotheses from the $n_b - 1$ case with an additional unmerged state $s_{n_b}$. Further, one can add a new hypothesis for each subset of the hypotheses in the $n_s-1, n_f$ case. So, the expression for the total number of regexes given the number of states in the base hypothesis is given by $g(n_b)$.
-% 	\begin{align*}
-% 	f(a, b) &= \left\{
-% 			\begin{array}{cl}
-%          		1 & a=b \vee b=1 \\
-%          		f(a-1, b-1) + b f(a-1, b) & \mbox{otherwise}
-%             \end{array}\right.
-% 		\\ g(n_b) &=\sum_{n_f=1}^{n_b} f(n_b, n_f)
-% 	\end{align*}
-% One of our experiment examples contained 25 nodes in the base hypothesis, which means that the hypothesis space is $g(25)\approx 5.0 \times 10^{17}$ regular expressions. Needless to say, it is intractable to exhaustively search the hypothesis space.
+\subsection{Sizing the Hypothesis Space}
+Ignoring wildcards and ignoring the mergings that require subset construction, each hypothesis can be defined as a set of mutually exclusive subsets of the states contained in the base hypothesis. For instance, given states $s_1, s_2, s_3$, the possible hypotheses are:
+	\begin{align*}
+		&s_1, s_2, s_3
+		\\&\text{merge}(s_1, s_2), s_3
+		\\&\text{merge}(s_1, s_3), s_2
+		\\&\text{merge}(s_2, s_3), s_1
+		\\&\text{merge}(s_1, s_2, s_3)
+	\end{align*}
+To generalize this to a case of $n_b$ states in the base hypothesis, one can consider individually the number of regexes with $n_f$ states in the finished regex. For the cases where $n_b=n_f$ or $n_f=1$, it is easy to verify that there exist only one regex. When creating hypotheses where $1 < n_f < n_b$, however, one can simply look to the case of $n_b - 1$. In particular, for every $n_f$, one can duplicate all of the hypotheses from the $n_b - 1$ case with an additional unmerged state $s_{n_b}$. Further, one can add a new hypothesis for each subset of the hypotheses in the $n_s-1, n_f$ case. So, the expression for the total number of regexes given the number of states in the base hypothesis is given by $g(n_b)$.
+	\begin{align*}
+	f(a, b) &= \left\{
+			\begin{array}{cl}
+         		1 & a=b \vee b=1 \\
+         		f(a-1, b-1) + b f(a-1, b) & \mbox{otherwise}
+            \end{array}\right.
+		\\ g(n_b) &=\sum_{n_f=1}^{n_b} f(n_b, n_f)
+	\end{align*}
+One of our experiment examples contained 25 nodes in the base hypothesis, which means that the hypothesis space is $g(25)\approx 5.0 \times 10^{17}$ regular expressions. Needless to say, it is intractable to exhaustively search the hypothesis space.
 
 \end{document}
