@@ -141,6 +141,7 @@ We define the probability of generating the characters as the product of the pro
 \end{align*}
 where $r_i$ is the state reached after the first $i$ characters, and $r_0$ is the start state.
 
+
 To simplify inference, we assume uniform probability over all possible outbound transitions for a given state. Formally, the probability of making a state transition is given by:
 \begin{align*}
 	p(\delta(r_i, a_{i+1})) &= \frac{1}{\sum_{a\in A} 1\{\delta(r_i, a)\in Q\}}
@@ -254,25 +255,25 @@ Figure~\ref{results-chart} shows the comparison between our model and the human 
 \includegraphics[scale=0.5]{results.png}
 \end{align*}
 \end{center}
-\caption{Chart showing  $p(s \in \mathcal{L} | S \subseteq {L}) $. Human subject data is in red, model data is in blue. $R$ = .75} 
+\caption{Chart showing  $p(s \in \mathcal{L} | S \subseteq {L}) $. Human subject data is in blue, model data is in red. $R$ = .75} 
 \label{results-chart}
 \end{figure} 
 
 Regarding our experimental data, we note that subjects completed the 10 or 11 question survey on average in around three minutes. It remains unclear if more standardized results would have emerged in certain cases if subjects had taken more time with the task. In addition, more fine grained results may have been obtained if we had instead allowed users to bet certain amounts on whether or not a test string was in $S$. 
 
-Observe that the model's performence is effectively all or none. In twelve of the trials, the model's predictions for  $p(s \in \mathcal{L} | S \subseteq {L}) $ was either 0 or 1.
+Observe that the model's performence is effectively all or none. In twelve of the trials, the model's predictions for  $p(s \in \mathcal{L} | S \subseteq {L}) $ was either 0 or 1. This suggests that the posterior is dominated by hypotheses with high likelihoods, all of which predict the same result. 
 
-We note that in cases 16 (S = \{`yyyt', `yt', `yyyt', `yyyt', `yt'\}, s= `yyyyyt'), 17 (S = \{`jojojojo', `jojojojo', `jojojojo'\}, s = `jojo'), and 18 (S = \{`twtwtw', `twtwtw', `twtwtw'\}, s =  `tw'), it is clear that the model weighs a smaller number of transitions greater than human subjects do. However, because this same parameter in part controls for wildcards, lowering it reduces performance on many other cases. This suggests that our model's parameter $\beta$ may in fact be better represented by more than one variable in human decision making. 
+We might explain the lack of diversity in the hypothesis set by 
+
+We note that in cases 16 (S = \{`yyyt', `yt', `yyyt', `yyyt', `yt'\}, s= `yyyyyt'), 17 (S = \{`jojojojo', `jojojojo', `jojojojo'\}, s = `jojo'), and 18 (S = \{`twtwtw', `twtwtw', `twtwtw'\}, s =  `tw'), it is clear that the model weighs a smaller number of transitions greater than human subjects do. However, because this same parameter in part controls for wildcards, lowering it reduces performance on many other cases. 
+
+This suggests that our model's parameter $\beta$ may in fact be better represented by more than one variable in human decision making. 
 
 We also observe that in such cases, there was a relatively small set of probable hypotheses, and that any favoring of smaller hypotheses was magnified by this fact. 
 \section{Conclusion and Future Work}
-future work idea:
-
--different wildcards (numbers, etc). this was implemented, but we didn't implement any experiments
-
 Despite the number of ways in which our model might be improved mentioned above,  it remains highly implausible that the brain generates its set of candidate hypotheses by ever considering even $2^n$ hypotheses in the first level of beam search we perform, much less more than that. Doing so would be highly inefficient: the number of implausible hypotheses generated would in most cases be far greater than the number of `good' hypotheses. Far more plausible a priori is the hypothesis that the brain uses of number of heuristics to generate a certain set of candidate hypothesis, and then uses some process analogous to Bayesian inference to select among those hypotheses. To shed light on how this hypothesis selection process may occur, we designed an experiment in which candidates chose among a number of possible rules to explain a set of strings S, but have yet to gather enough data to reach any significant conclusions. 
 
-Further experiments could be conducted to determine what heuristics may be at work in the hypothesis generation process. For any set of candidate heuristics, it will remain to be determined whether or not such heuristics are at some point learned. Clearly some semantic considerations are at work in human pattern recognition on strings: cat and mat but not qat are meaningful english words; `ao' and `eo' and `io' begin with vowels unlike `xo'. (This experiment was designed to avoid such candidate hypotheses.)
+Further experiments could be conducted to determine what heuristics may be at work in the hypothesis generation process. For any set of candidate heuristics, it will remain to be determined whether or not such heuristics are at some point learned. Clearly some semantic considerations are at work in human pattern recognition on strings: cat and mat but not qat are meaningful english words; `ao' and `eo' and `io' begin with vowels unlike `xo'. (This experiment was designed to avoid such candidate hypotheses.) One partial solution to this sort of problem would be to permit different varieties of wildcards (e.g., for vowels) beyond just those for number and alphabetical character. Here, though, we risk fitting experimental data at the expense of more general having a more general model, since such wildcards would have to be hardcoded. 
 
 We note that we do not directly solve the problem of finding a most plausible way to align a set of strings $S$. Humans are excellent at quickly noticing the pattern in `aall', `ball', and `call'. Although our model will infer that the last three letters can be represented with only three states in each case, in doing so it generates many candidate regular expressions which a human being would not consciously consider.  
 
