@@ -199,6 +199,14 @@ class Inference:
 			self.addRegexes(newBeam)
 			newBeam = list()
 
+	def checkVotingWeight(self):
+		totalProb = 0
+		for h, prob in self.hSpace_:
+			totalProb += exp(prob)
+
+		for i in range(10):
+			print "hypothesis", i, ": %0.3f" % (exp(inf.hSpace_[i][1]) * 100 / totalProb)
+
 if __name__ == '__main__':
 	# print "%e"%numRegexes(25)
 	# strings = ['abc', 'ad']
@@ -235,22 +243,23 @@ if __name__ == '__main__':
 	###########################################################################
 	# test, beam search
 	# strings = ['abc', 'adc', 'adce'] # test for abce
-	strings = ['ab', 'abb'] # test for 'zzo'
+	# strings = ['ab', 'abb'] # test for 'zzo'
 	# strings = ['htuu', 'ntuu', 'htuu', 'xtuu', 'ztuu', 'xtuu', 'ztuu'] # test for jtuu
-	# strings = ['yyyt', 'yt', 'yyyt', 'yyyt', 'yt'] # test for 'yyt'
+	strings = ['yyyt', 'yt', 'yyyt', 'yyyt', 'yt'] # test for 'yyt'
 	# strings = ['lp', 'lllp', 'llp', 'llllp', 'llp', 'lllp'] # test for 'lllllp'
 	# strings = ['zdill', 'ddill', 'ddill', 'zdill', 'ddill', 'zdill'] # test for gdill
-	# strings = ['jojojojo', 'jojojojo', 'jojojojo']
+	# strings = ['jojojojo', 'jojojojo', 'jojojojo'] #test for jojo
 
 	inf = Inference(HSIZE, strings)
 	inf.beamSearch()
+	inf.checkVotingWeight()
 	inf.hSpace_[0][0].printGraph("output/inference/trial-end-best-1.png")
 	inf.hSpace_[1][0].printGraph("output/inference/trial-end-best-2.png")
 	inf.hSpace_[2][0].printGraph("output/inference/trial-end-best-3.png")
 	inf.hSpace_[3][0].printGraph("output/inference/trial-end-best-4.png")
 	inf.hSpace_[4][0].printGraph("output/inference/trial-end-best-5.png")
 
-	print "accept %0.3f%%" % (inf.testString("abbb") * 100)
+	print "accept %0.3f%%" % (inf.testString("yyt") * 100)
 
 
 	###########################################################################
