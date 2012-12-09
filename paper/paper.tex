@@ -127,41 +127,39 @@ Thus, we have biased smaller DFA that use wildcards instead of literal character
 \subsection{Likelihood}
 To define the likelihood of producing certain strings, we turn a DFA into a generative automaton with a probability distribution over generated strings. Letting the input strings be independent, the probability of generating the set of strings $S$ is equal to the product of the probabilities of generating each string.
 \begin{align*}
-	p(S) = \prod_{s \in S} p(s)
+	p(S|h) = \prod_{s \in S} p(s|h)
 \end{align*}
 
-Let the string $s$ be the concatenation of characters $\{a_0,a_1,...,a_{n-1}\}$. We define the probability of generating a string as the product of the probability of generating the letters in sequence $p(a_0,a_1,...,a_{n-1})$ and the product of stopping the string generation on an accept state $p(\text{stop})$.
+Let the string $s$ be the concatenation of characters $\{a_0,a_1,...,a_{n-1}\}$. We define the probability of generating a string as the product of the probability of generating the letters in sequence $p(a_0,a_1,...,a_{n-1})$ and the product of stopping the string generation on an accept state $p(\text{stop}|h)$.
 \begin{align*}
-	p(s) = p(a_0,a_1,...,a_{n-1})p(\text{stop})
+	p(s|h) = p(a_0,a_1,...,a_{n-1}|h)p(\text{stop}|h)
 \end{align*}
 
 We define the probability of generating the characters as the product of the probabilities of making each state transition.
 \begin{align*}
-	p(a_0, a_1, ..., a_{n-1}) = \prod_{i=0}^{n-1}p(\delta(r_i, a_i))
+	p(a_0, a_1, ..., a_{n-1}|h) = \prod_{i=0}^{n-1}p(\delta_h(r_i, a_i))
 \end{align*}
-where $r_i$ is the state reached after the first $i$ characters, and $r_0$ is the start state.
+where $\delta_h$ is the transition function of $h$, $r_i$ is the state reached after the first $i$ characters, and $r_0$ is the start state.
 
 To simplify inference, we assume uniform probability over all possible outbound transitions for a given state. Formally, the probability of making a state transition is given by:
 \begin{align*}
-	p(\delta(r_i, a_i)) &= \frac{1}{\sum_{a\in A} 1\{\delta(r_i, a)\in Q\}}
+	p(\delta_h(r_i, a_i)) &= \frac{1}{\sum_{a\in A} 1\{\delta_h(r_i, a)\in Q_h\}}
 \end{align*}
-where $1\{\cdot\}$ is the indicator function, which evaluates to $1$ if the enclosed proposition is true and $0$ otherwise. $\delta(r_i, a)\in Q$ indicates that the state transition leads to another state of the DFA, so the denominator counts the number of characters for which a transition is defined. In the case of the wildcard `A', the transition is defined for all 26 letters, so the denominator is 26.
+where $Q_h$ is the set of states in hypothesis $h$ and $1\{\cdot\}$ is the indicator function, which evaluates to $1$ if the enclosed proposition is true and $0$ otherwise. $\delta_h(r_i, a)\in Q_h$ indicates that the state transition leads to another state of the DFA, so the denominator counts the number of characters for which a transition is defined. In the case of the wildcard `A', the transition is defined for all 26 letters, so the denominator is 26.
 
 For the cases in which a string may alternatively be accepted or continue, one must assign a probability for accepting or continuing the string. For instance, consider the DFA in part (c) of Figure~\ref{merge-figure}. The DFA may generate the empty string, `', or it may generate any arbitrary string with `a' and `b', like `ababbba'. We define the probability of stopping at a given string to be a fixed value $\tau$. This makes shorter strings more likely to be generated.
 
-Instead of leaving $\tau$ as a parameter of the model, we assume a uniform prior over the parameter and marginalize it when calculating the likelihood of a string. So, let $b$ be the number of times the DFA skipped an accept state before accepting. That is, $b$ is given by the equation below, where $F$ is the set of accept states.
+Instead of leaving $\tau$ as a parameter of the model, we use a technique explained by \citeA{HwangStuhlmullerGoodman2011}: assume a uniform prior over the parameter and marginalize it when calculating the likelihood of a string. So, let $b$ be the number of times the DFA skipped an accept state before accepting. That is, $b$ is given by the equation below, where $F_h$ is the set of accept states for hypothesis $h$.
 \begin{align*}
-	b = \sum_{i=0}^{n-1} 1 \{ r_i \in F\}
+	b = \sum_{i=0}^{n-1} 1 \{ r_i \in F_h\}
 \end{align*}
 
-% TODO: Cite this
-
-The probability of stopping at an accept state is given by the equation below. The condition $r_n \in F \wedge \exists a : \delta(r_n, a)\in Q$ states that the last state reached by the string is an accept state, and that that state has at least one outbound transition.
+The probability of stopping at an accept state is given by the equation below. The condition $r_n \in F_h \wedge \exists a : \delta_h(r_n, a)\in Q_h$ states that the last state reached by the string is an accept state, and that that state has at least one outbound transition.
 \begin{align*}
-	p(\text{stop}) &= \left\{
+	p(\text{stop}|h) &= \left\{
 		\begin{array}{rl}
-		\tau (1-\tau)^b & r_n \in F \wedge \exists a : \delta(r_n, a)\in Q
-		\\ (1-\tau)^b & r_n \in F \wedge \not \exists a : \delta(r_n, a)\in Q
+		\tau (1-\tau)^b & r_n \in F_h \wedge \exists a : \delta_h(r_n, a)\in Q_h
+		\\ (1-\tau)^b & r_n \in F_h \wedge \not \exists a : \delta_h(r_n, a)\in Q_h
 		\\ 0 & \text{otherwise}
 		\end{array}
 		\right.
@@ -173,9 +171,9 @@ Marginalizing over all possible values of $\tau$, we have:
 	\\ \int_0^1 (1-\tau)^b &= \frac{1}{b+1}
 \end{align*}
 
-Our equation for $p(\text{stop})$ is thus:
+Our equation for $p(\text{stop}|h)$ is thus:
 \begin{align*}
-	p(\text{stop}) &= \left\{
+	p(\text{stop}|h) &= \left\{
 		\begin{array}{rl}
 		\frac{1}{b^2+3b+1} & r_n \in F \wedge \exists a : \delta(r_n, a)
 		\\ \frac{1}{b+1} & r_n \in F \wedge \not \exists a : \delta(r_n, a)
@@ -185,7 +183,7 @@ Our equation for $p(\text{stop})$ is thus:
 \end{align*}
 
 \section{Experiment Design and Model Fitting}
-Having generated the above Bayesian model for selection of the regular expression with the highest posterior probability, we then conducted a behavioral experiment.  41 subjects (Median age 34, std-dev 13.3) were surveyed on Amazon Mechanical Turk. Two groups (one of 20, one of 21) were presented with 10 yes or no questions in which they were asked to determine whether a given string `fit' with a list of strings. A sample question was as follows:
+Having generated the above Bayesian model for selection of the regular expression with the highest posterior probability, we then conducted a behavioral experiment.  41 subjects (Median age 34, std-dev 13.3) were surveyed on Amazon Mechanical Turk. Two groups (one of 20, one of 21) were presented with 10 yes or no questions in which they were asked to determine whether a given string ``fit'' with a list of strings. A sample question was as follows:
 \begin{center}Given the list:
 
 \textbf{yyyt \\
@@ -200,7 +198,7 @@ Does \textbf{yyt} fit?
 The experimental data served two purposes. Using the responses to four out of 23 questions, we set the parameters for alpha and beta. We then used the remaining questions to test our model's performance in a regex game as shown below. 
 
 \subsection{Parameter Fitting}
-Because the role of $\beta$ had the effect of biasing models with fewer transitions, it also had a tendency to bias regular expressions with fewer states. For instance, the $\beta$ term would prefer the regular expression `a*' over `aaaa'. Thus, this term was fitted before fitting the $\alpha$ term.
+Because the role of $\beta$ had the effect of biasing models with fewer transitions, it also had a tendency to bias regular expressions with fewer states. For instance, the $\beta$ term would prefer the regular expression \verb!a*! over \verb!aaaa!. Thus, this term was fitted before fitting the $\alpha$ term.
 
 To fit the $\beta$ term, we observed experiments that would indicate the transition point between a preference for generality over specificity for wildcard-based experiments (e.g. the first two experiments outlined in Table~\ref{parameter-table}). Utilizing the fact that increasing the ratio of repeated strings to new strings decreases the likelihood of a wildcard, and decreasing the length of the sample strings would increases the likelihood of a wildcard, the first two experiments suggest a decision point. That is, if the DFA model is a valid representation of the subjects' responses, then the $\beta$ term should be between $3$ and $5$. For further experimentation, we fixed it at $4$.
 
@@ -254,7 +252,7 @@ Figure~\ref{results-chart} shows the comparison between our model and the human 
 \includegraphics[scale=0.5]{results.png}
 \end{align*}
 \end{center}
-\caption{Chart showing  $p(s \in \mathcal{L} | S \subseteq {L}) $. Human subject data is in red, model data is in blue. $R$ = .75} 
+\caption{Chart showing  $p(s \in \mathcal{L} | S \subseteq {L}) $, sorted in increasing order for model data. Human subject data is in blue, model data is in red. $R$ = .75} 
 \label{results-chart}
 \end{figure} 
 
