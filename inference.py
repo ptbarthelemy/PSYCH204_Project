@@ -1,6 +1,7 @@
 from regex import Regex
 from math import exp
 from state import keysOverlap, keyMinus
+import csv
 import copy
 
 def toStr2(s):
@@ -188,11 +189,11 @@ class Inference:
 				if True:
 					beam.append((re1, prob1))
 
-			beam[0][0].printGraph("output/beam-iter-%d-1.png"%i)
-			beam[1][0].printGraph("output/beam-iter-%d-2.png"%i)
-			beam[2][0].printGraph("output/beam-iter-%d-3.png"%i)
-			beam[3][0].printGraph("output/beam-iter-%d-4.png"%i)
-			beam[4][0].printGraph("output/beam-iter-%d-5.png"%i)
+			#beam[0][0].printGraph("output/beam-iter-%d-1.png"%i)
+			#beam[1][0].printGraph("output/beam-iter-%d-2.png"%i)
+			#beam[2][0].printGraph("output/beam-iter-%d-3.png"%i)
+			#beam[3][0].printGraph("output/beam-iter-%d-4.png"%i)
+			#beam[4][0].printGraph("output/beam-iter-%d-5.png"%i)
 
 			# add hypotheses in beam to hset, clear newbeam
 			self.addRegexes(beam)
@@ -233,24 +234,48 @@ if __name__ == '__main__':
 	# if alpha is zero, beta must be greater than 1.5
 	#strings = ['jojojojo', 'jojojojo', 'jojojojo']	
 	###########################################################################
-	# test, beam search
-	# strings = ['abc', 'adc', 'adce'] # test for abce
-	strings = ['ab', 'abb'] # test for 'zzo'
-	# strings = ['htuu', 'ntuu', 'htuu', 'xtuu', 'ztuu', 'xtuu', 'ztuu'] # test for jtuu
-	# strings = ['yyyt', 'yt', 'yyyt', 'yyyt', 'yt'] # test for 'yyt'
-	# strings = ['lp', 'lllp', 'llp', 'llllp', 'llp', 'lllp'] # test for 'lllllp'
-	# strings = ['zdill', 'ddill', 'ddill', 'zdill', 'ddill', 'zdill'] # test for gdill
-	# strings = ['jojojojo', 'jojojojo', 'jojojojo']
+	input_strings = []
 
-	inf = Inference(HSIZE, strings)
-	inf.beamSearch()
-	inf.hSpace_[0][0].printGraph("output/inference/trial-end-best-1.png")
-	inf.hSpace_[1][0].printGraph("output/inference/trial-end-best-2.png")
-	inf.hSpace_[2][0].printGraph("output/inference/trial-end-best-3.png")
-	inf.hSpace_[3][0].printGraph("output/inference/trial-end-best-4.png")
-	inf.hSpace_[4][0].printGraph("output/inference/trial-end-best-5.png")
+	input_strings.append(['yyyt', 'yt', 'yyyt', 'yyyt', 'yt'])
+	input_strings.append(['a'])
+	input_strings.append(['ab'])
+	input_strings.append(['jojojojo', 'jojojojo', 'jojojojo'])
+	input_strings.append(['kl', 'al'])
+	input_strings.append(['twtwtw', 'twtwtw', 'twtwtw'])
+	input_strings.append(['mat', 'mat', 'mat', 'mat', 'mat', 'tat','mat'])
+	input_strings.append(['aaaa','aaaa','aaa'])
+	input_strings.append(['www', 'wwww', 'wwww', 'www,' 'wwww'])
+	input_strings.append(['qtro','qtrs','ctrs','ctro'])
+	input_strings.append(['lcyy','acyy','zcyy','zcyy'])
+	input_strings.append(['sfef', 'sfef','sfef', 'sfef'])
+	input_strings.append(['bhi', 'bhw', 'bhi', 'bhw', 'bhw'])
+	input_strings.append(['adc', 'abc', 'adce'])
+	input_strings.append(['ab','abb'])
+	input_strings.append(['efg', 'hfg' ,'ifg'])
+	input_strings.append(['aoo','ao','aooo'])
+	input_strings.append(['zze','zzq','zze','zze'])
+	input_strings.append(['glts', 'elts', 'glts', 'flts'])
+	input_strings.append(['htuu','ntuu','htuu','xtuu','ztuu','xtuu','ztuu'])
+	input_strings.append(['yyyt', 'yt', 'yyyt', 'yyyt', 'yt'])
+	input_strings.append(['lp','lllp','llp','llllp','llp','lllp'])
+	input_strings.append(['zill','ddill','ddill','zdill','ddill','zdill'])
+	test_strings = ['yyyyyt','b','abb','jojo','cl','tw','cat','aaaaaa','wwwwww','ibcd', 'wxcy','lfjk','bho','abce','abbb','ffg','aoooo','zzo','lfts','jtuu','yyt','lllllp','gdill']
+	
+	test_results = []
+	survey_results = [.8, .5, .85,.75,.75,.68,.65,.95,1,.05,.05,0,.35,1,.9,.45,.8,.35,.7,.6,.5,.85,.15]
+	
+	for j in range(len(input_strings)):
+		strings = input_strings[j]
+		inf = Inference(HSIZE, strings)
+		inf.beamSearch()
+		test_results.append(inf.testString(test_strings[j]))
+		print strings + ',' + test_strings[i] + ',' + survey_results[i]
+	print test_results
 
-	print "accept %0.3f%%" % (inf.testString("abbb") * 100)
+	with open('new-model-results.csv', 	'wb') as csvfile:
+		thewriter = csv.writer(csvfile)
+		for i, string in enumerate(input_strings):
+			thewriter.writerow([string] + [test_strings[i]] + [survey_results[i]])
 
 
 	###########################################################################
