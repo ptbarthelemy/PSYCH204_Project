@@ -205,8 +205,13 @@ class Inference:
 		for h, prob in self.hSpace_:
 			totalProb += exp(prob)
 
+		result = "{"
 		for i in range(10):
-			print "hypothesis", i, ": %0.3f" % (exp(inf.hSpace_[i][1]) * 100 / totalProb)
+			if i >= len(inf.hSpace_):
+				break
+			result += ("%d : %0.3f;" % (i, (exp(inf.hSpace_[i][1]) * 100 / totalProb)))
+		result = result[:-1] + "}"
+		return result
 
 if __name__ == '__main__':
 	# print "%e"%numRegexes(25)
@@ -252,7 +257,7 @@ if __name__ == '__main__':
 	input_strings.append(['twtwtw', 'twtwtw', 'twtwtw'])
 	input_strings.append(['mat', 'mat', 'mat', 'mat', 'mat', 'tat','mat'])
 	input_strings.append(['aaaa','aaaa','aaa'])
-	input_strings.append(['www', 'wwww', 'wwww', 'www,' 'wwww'])
+	input_strings.append(['www', 'wwww', 'wwww', 'www', 'wwww'])
 	input_strings.append(['qtro','qtrs','ctrs','ctro'])
 	input_strings.append(['lcyy','acyy','zcyy','zcyy'])
 	input_strings.append(['sfef', 'sfef','sfef', 'sfef'])
@@ -271,19 +276,22 @@ if __name__ == '__main__':
 	
 	test_results = []
 	survey_results = [.8, .5, .85,.75,.75,.68,.65,.95,1,.05,.05,0,.35,1,.9,.45,.8,.35,.7,.6,.5,.85,.15]
-	
+	voting_results = list()
+
 	for j in range(len(input_strings)):
 		strings = input_strings[j]
 		inf = Inference(HSIZE, strings)
 		inf.beamSearch()
+		voting_results.append(inf.checkVotingWeight())
 		test_results.append(inf.testString(test_strings[j]))
-		print strings + ',' + test_strings[i] + ',' + survey_results[i]
+		# print strings + ',' + test_strings[i] + ',' + survey_results[i]
 	print test_results
-
+	for r in voting_results:
+		print r
 	with open('new-model-results.csv', 	'wb') as csvfile:
 		thewriter = csv.writer(csvfile)
 		for i, string in enumerate(input_strings):
-			thewriter.writerow([string] + [test_strings[i]] + [survey_results[i]])
+			thewriter.writerow([string] + [test_strings[i]] + [survey_results[i]] + [voting_results[i]])
 
 
 
