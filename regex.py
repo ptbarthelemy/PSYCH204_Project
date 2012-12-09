@@ -4,7 +4,7 @@ import pydot
 from state import State, keysOverlap, keyMinus, keyUnion, keyIntersect
 
 DEBUG = False
-ALPHA =1
+ALPHA = 1
 BETA = 4
 PERMUTE_PROB = 0.7
 

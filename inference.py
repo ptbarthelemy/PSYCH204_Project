@@ -200,6 +200,14 @@ class Inference:
 			self.addRegexes(newBeam)
 			newBeam = list()
 
+	def checkVotingWeight(self):
+		totalProb = 0
+		for h, prob in self.hSpace_:
+			totalProb += exp(prob)
+
+		for i in range(10):
+			print "hypothesis", i, ": %0.3f" % (exp(inf.hSpace_[i][1]) * 100 / totalProb)
+
 if __name__ == '__main__':
 	# print "%e"%numRegexes(25)
 	# strings = ['abc', 'ad']
@@ -276,6 +284,7 @@ if __name__ == '__main__':
 		thewriter = csv.writer(csvfile)
 		for i, string in enumerate(input_strings):
 			thewriter.writerow([string] + [test_strings[i]] + [survey_results[i]])
+
 
 
 	###########################################################################
